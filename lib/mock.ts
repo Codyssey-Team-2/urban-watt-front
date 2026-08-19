@@ -280,8 +280,108 @@ export const DISTRICT_GEOJSON: GeoJSON.FeatureCollection<
   })),
 }
 
-/** 두 동이 모두 보이는 초기 뷰포트 */
-export const INITIAL_VIEW = {
-  center: [126.9728, 37.6058] as [number, number],
-  zoom: 11.4,
+/**
+ * 두 동을 모두 감싸는 경위도 범위.
+ * 고정 center/zoom을 쓰면 창 비율에 따라 한쪽이 화면 밖으로 나가므로,
+ * 지도는 이 범위에 맞춰 자동으로 잡는다.
+ */
+export const DISTRICT_BOUNDS: [[number, number], [number, number]] = (() => {
+  const coords = DISTRICT_GEOJSON.features.flatMap(
+    (f) => f.geometry.coordinates[0],
+  )
+  const lngs = coords.map((c) => c[0])
+  const lats = coords.map((c) => c[1])
+  return [
+    [Math.min(...lngs), Math.min(...lats)],
+    [Math.max(...lngs), Math.max(...lats)],
+  ]
+})()
+
+/**
+ * 지도를 채우는 패널들 때문에 실제로 비어 있는 영역은 화면 가운데뿐이다.
+ * 사이드바·우측 레일·상단 카드·하단 차트를 피해 여백을 준다.
+ */
+export const MAP_PADDING = { top: 110, bottom: 340, left: 330, right: 460 }
+
+// ── 서울 맥락 (근사) ────────────────────────────────────────────────────
+//
+// 타일 없이 단색 배경만 쓰기 때문에, 두 폴리곤만 떠 있으면 어디인지 알 수 없다.
+// 서울 외곽선과 한강을 아주 옅게 깔아 위치 감각만 만든다. 실제 경계가 아니다.
+
+const SEOUL_RING: [number, number][] = [
+  [126.79, 37.58],
+  [126.83, 37.63],
+  [126.88, 37.68],
+  [126.96, 37.7],
+  [127.04, 37.69],
+  [127.1, 37.66],
+  [127.15, 37.61],
+  [127.18, 37.55],
+  [127.14, 37.49],
+  [127.06, 37.45],
+  [126.97, 37.43],
+  [126.88, 37.45],
+  [126.81, 37.49],
+  [126.77, 37.53],
+]
+
+export const SEOUL_OUTLINE: GeoJSON.Feature<GeoJSON.Polygon> = {
+  type: 'Feature',
+  properties: {},
+  geometry: {
+    type: 'Polygon',
+    coordinates: [[...SEOUL_RING, SEOUL_RING[0]]],
+  },
+}
+
+export const HAN_RIVER: GeoJSON.Feature<GeoJSON.LineString> = {
+  type: 'Feature',
+  properties: {},
+  geometry: {
+    type: 'LineString',
+    coordinates: [
+      [126.78, 37.58],
+      [126.84, 37.56],
+      [126.9, 37.54],
+      [126.96, 37.52],
+      [127.02, 37.52],
+      [127.08, 37.54],
+      [127.14, 37.56],
+    ],
+  },
+}
+
+/** 서울 전체가 들어가는 경위도 범위 — 미니맵 좌표 변환에 쓴다. */
+export const SEOUL_BBOX = {
+  minLng: 126.76,
+  maxLng: 127.19,
+  minLat: 37.42,
+  maxLat: 37.71,
+}
+
+/**
+ * 지도 채색은 절대 전력량이 아니라 평시 대비 초과율을 따른다.
+ * 절대량으로 칠하면 수요가 큰 지역이 무조건 붉게 나와 미기후 주장이 사라진다.
+ */
+export function districtFeatures(scenario: ScenarioKey) {
+  return {
+    type: 'FeatureCollection' as const,
+    features: DISTRICTS.map((d) => {
+      const forecast = getForecast(d.code, scenario)
+      const source = DISTRICT_GEOJSON.features.find(
+        (f) => f.properties.code === d.code,
+      )!
+      return {
+        type: 'Feature' as const,
+        properties: {
+          code: d.code,
+          name: d.name,
+          variant: d.variant,
+          excess: forecast.excessRate,
+          risk: forecast.riskLevel,
+        },
+        geometry: source.geometry,
+      }
+    }),
+  }
 }
