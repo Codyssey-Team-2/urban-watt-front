@@ -4,7 +4,7 @@
    UrbanWatt 디자인 토큰
    Tailwind v4는 JS config를 쓰지 않는다. 색/그림자/브레이크포인트는
    여기 @theme 안에서 정의하고, 클래스명은 v3와 동일하게 나온다.
-     --color-warm-text  ->  text-warm-text / bg-warm-text / border-warm-text
+     --color-urban-text  ->  text-urban-text / bg-urban-text / border-urban-text
    ────────────────────────────────────────────────────────────── */
 @theme {
   /* 브랜드 */
@@ -17,13 +17,25 @@
   --color-cool-fill: #6fc49a;
   --color-cool-deep: #0e4f33;
 
-  /* 구로동 (위험) */
-  --color-warm: #d2543a;
-  --color-warm-fill: #e8785c;
-  --color-warm-deep: #7a2a18;
-  --color-warm-text: #c64a31;
-  --color-warm-light: #fbe5de;
-  --color-warm-text-dark: #8a3320;
+  /* 구로동 — 지역 정체성 색.
+     붉은 계열은 수치가 낮을 때도 위급해 보여서 파랑으로 잡았다.
+     초록↔파랑은 적록색각 구분 여유도 훨씬 크다 (ΔE 22.6 vs 코랄 6.5). */
+  --color-urban: #2d6fd1;
+  --color-urban-fill: #7fa9e8;
+  --color-urban-deep: #14406f;
+  --color-urban-text: #2560b8;
+  --color-urban-light: #e3edfb;
+  --color-urban-text-dark: #1b4a8c;
+
+  /* 상태 색 — 지역 정체성과 분리한다. 위험할 때만 빨강이 나온다. */
+  --color-danger: #c62828;
+  --color-danger-fill: #e57373;
+  --color-danger-deep: #7f1d1d;
+  --color-danger-text: #c62828;
+  --color-danger-light: #fbe3e3;
+  --color-danger-text-dark: #8a1f1f;
+  --color-caution-light: #fdf0d5;
+  --color-caution-text: #8a5a00;
 
   /* 중립 */
   --color-ink: #16241d;
@@ -39,7 +51,7 @@
 
   /* 패널 그림자: 접촉(1겹) + 주변(2겹). 1겹이면 스티커처럼 보인다. */
   --shadow-panel: 0 2px 4px rgba(20, 50, 35, 0.05), 0 14px 40px rgba(20, 50, 35, 0.1);
-  --shadow-panel-warm: 0 2px 4px rgba(20, 50, 35, 0.05), 0 14px 40px rgba(150, 60, 40, 0.15);
+  --shadow-panel-danger: 0 2px 4px rgba(20, 50, 35, 0.05), 0 14px 40px rgba(150, 40, 40, 0.16);
 
   /* 1600px는 Tailwind 기본 브레이크포인트에 없다 (2xl=1536). 사이드바 접힘 기준. */
   --breakpoint-wide: 1600px;

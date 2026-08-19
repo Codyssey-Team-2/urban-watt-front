@@ -14,7 +14,7 @@ export function HeaderCard({ hour }: HeaderCardProps) {
           진관동 · 구로동
         </span>
         {WEATHER.isHeatwave && (
-          <span className="rounded-full bg-warm-light px-2.5 py-0.5 text-[13px] font-semibold text-warm-text-dark">
+          <span className="rounded-full bg-danger-light px-2.5 py-0.5 text-[13px] font-semibold text-danger-text-dark">
             폭염 {WEATHER.asosTemp}°C
           </span>
         )}

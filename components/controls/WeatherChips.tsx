@@ -20,14 +20,14 @@ function Chip({ icon: Icon, label, value, emphasize }: ChipProps) {
     <div className="flex items-center gap-2">
       <Icon
         size={16}
-        className={cn('flex-none', emphasize ? 'text-warm-text' : 'text-muted')}
+        className={cn('flex-none', emphasize ? 'text-danger-text' : 'text-muted')}
       />
       <div>
         <div className="text-[13px] leading-tight text-faint">{label}</div>
         <div
           className={cn(
             'tnum text-[15px] font-semibold leading-tight',
-            emphasize ? 'text-warm-text' : 'text-ink',
+            emphasize ? 'text-danger-text' : 'text-ink',
           )}
         >
           {value}

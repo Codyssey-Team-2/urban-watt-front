@@ -37,7 +37,7 @@ export const DISTRICTS: District[] = [
   {
     code: GURO_CODE,
     name: '구로동',
-    variant: 'warm',
+    variant: 'urban',
     center: [126.8847, 37.4942],
     microclimate: {
       // 준공업지역과 아파트 단지가 섞여 있고 안양천을 끼고 있어,
@@ -255,15 +255,15 @@ export const getForecasts = (scenario: ScenarioKey): Forecast[] =>
  */
 function buildBriefings(): Record<ScenarioKey, Briefing> {
   const cool = getDistrict(JINGWAN_CODE)
-  const warm = getDistrict(GURO_CODE)
+  const urban = getDistrict(GURO_CODE)
   const balanceGap = round1(
-    cool.microclimate.balancePoint - warm.microclimate.balancePoint,
+    cool.microclimate.balancePoint - urban.microclimate.balancePoint,
   )
-  const { excess } = CURVES[warm.code]
+  const { excess } = CURVES[urban.code]
 
   return {
     b: {
-      summary: `서울 대표 기상(ASOS)만으로는 두 지역이 같은 ${WEATHER.asosTemp}°C를 겪은 것으로 계산됩니다. ${warm.name} 피크는 평시 대비 +${excess.b}%로 예측됩니다.`,
+      summary: `서울 대표 기상(ASOS)만으로는 두 지역이 같은 ${WEATHER.asosTemp}°C를 겪은 것으로 계산됩니다. ${urban.name} 피크는 평시 대비 +${excess.b}%로 예측됩니다.`,
       evidence: [
         '두 지역에 동일한 관측값이 적용됨',
         '지역 간 예측 격차는 건물 용도 구성에서만 발생',
@@ -272,11 +272,11 @@ function buildBriefings(): Record<ScenarioKey, Briefing> {
         '실측 미기후가 반영되지 않아 도심 밀집지의 피크가 과소추정될 수 있습니다.',
     },
     c: {
-      summary: `${warm.name}은 ${cool.name}보다 ${balanceGap.toFixed(1)}°C 낮은 기온에서 냉방이 시작되며, 동일 기온에서 수요 증가 기울기가 ${warm.microclimate.coolingSlope.toFixed(1)}배로 관측됩니다. 피크는 평시 대비 +${excess.c}%까지 올라갑니다.`,
+      summary: `${urban.name}은 ${cool.name}보다 ${balanceGap.toFixed(1)}°C 낮은 기온에서 냉방이 시작되며, 동일 기온에서 수요 증가 기울기가 ${urban.microclimate.coolingSlope.toFixed(1)}배로 관측됩니다. 피크는 평시 대비 +${excess.c}%까지 올라갑니다.`,
       evidence: [
         `S-DoT 실측이 ASOS 대비 +${WEATHER.sdotGap}°C 높음`,
-        `불투수피복률 ${warm.microclimate.imperviousRate}% vs ${cool.microclimate.imperviousRate}%, 식생피복률 ${warm.microclimate.vegetationRate}% vs ${cool.microclimate.vegetationRate}%`,
-        `냉방 균형점 ${warm.microclimate.balancePoint.toFixed(1)}°C vs ${cool.microclimate.balancePoint.toFixed(1)}°C`,
+        `불투수피복률 ${urban.microclimate.imperviousRate}% vs ${cool.microclimate.imperviousRate}%, 식생피복률 ${urban.microclimate.vegetationRate}% vs ${cool.microclimate.vegetationRate}%`,
+        `냉방 균형점 ${urban.microclimate.balancePoint.toFixed(1)}°C vs ${cool.microclimate.balancePoint.toFixed(1)}°C`,
       ],
       caveat: `단일 폭염일(${DEMO_DATE}) 기준이며, 계절 전체로 일반화하기에는 표본이 부족합니다.`,
     },
