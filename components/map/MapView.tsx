@@ -17,6 +17,7 @@ import {
   SEOUL_OUTLINE,
   districtFeatures,
   getExcessAt,
+  getRiskLevel,
 } from '@/lib/mock'
 import type { ScenarioKey } from '@/lib/types'
 
@@ -146,16 +147,22 @@ export function MapView({
         type: 'fill',
         source: SRC,
         paint: {
-          // 색상(hue)은 지역 정체성, 진하기는 초과율. 두 축이 섞이지 않는다.
+          // 평소에는 지역 정체성 색(진하기가 초과율), 위험 상태에서는 채움까지 빨강.
           'fill-color': [
-            'match',
-            ['get', 'variant'],
-            'cool',
-            '#6FC49A',
-            'urban',
-            '#7FA9E8',
-            '#CCCCCC',
+            'case',
+            ['==', ['get', 'risk'], 'danger'],
+            '#E57373',
+            [
+              'match',
+              ['get', 'variant'],
+              'cool',
+              '#6FC49A',
+              'urban',
+              '#7FA9E8',
+              '#CCCCCC',
+            ],
           ],
+          'fill-color-transition': { duration: 200 },
           'fill-opacity': [
             'interpolate',
             ['linear'],
@@ -290,7 +297,7 @@ function MapLabels({
         <div class="rounded-full border border-[rgba(22,60,42,0.10)] bg-white/96 px-3 py-1.5 shadow-panel backdrop-blur-[14px]">
           <div class="flex items-center gap-2 whitespace-nowrap">
             <span class="text-[15px] font-semibold ${urban ? 'text-urban-deep' : 'text-cool-deep'}">${district.name}</span>
-            <span data-value class="tnum text-[15px] font-semibold ${urban ? 'text-urban-text' : 'text-cool'}"></span>
+            <span data-value class="tnum text-[15px] font-semibold"></span>
           </div>
         </div>
         <div class="size-2.5 rotate-45 rounded-[2px] border-2 border-white" style="background:${urban ? '#2D6FD1' : '#2E9E6B'}"></div>
@@ -312,6 +319,11 @@ function MapLabels({
     markersRef.current.forEach(({ value }, i) => {
       const excess = getExcessAt(DISTRICTS[i].code, scenario, hour)
       value.textContent = `+${Math.round(excess)}%`
+      // 카드와 같은 규칙 — 평소엔 검정, 위험일 때만 빨강
+      value.style.color =
+        getRiskLevel(excess) === 'danger'
+          ? 'var(--color-danger-text)'
+          : 'var(--color-ink)'
     })
   }, [scenario, hour, map])
 

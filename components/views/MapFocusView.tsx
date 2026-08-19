@@ -58,7 +58,6 @@ export function MapFocusView({
           {DISTRICTS.map((district) => {
             const excess = getExcessAt(district.code, scenario, hour)
             const risk = getRiskLevel(excess)
-            const urban = district.variant === 'urban'
             return (
               <Panel
                 key={district.code}
@@ -78,11 +77,7 @@ export function MapFocusView({
                   <div
                     className={cn(
                       'tnum mt-2 text-[40px] font-semibold leading-none tracking-[-0.02em] transition-colors duration-200',
-                      risk === 'danger'
-                        ? 'text-danger-text'
-                        : urban
-                          ? 'text-urban-text'
-                          : 'text-ink',
+                      risk === 'danger' ? 'text-danger-text' : 'text-ink',
                     )}
                   >
                     +{Math.round(excess)}%
