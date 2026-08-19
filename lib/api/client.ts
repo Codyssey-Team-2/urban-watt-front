@@ -1,10 +1,12 @@
 import type {
+  BriefingResponse,
   CompareResponse,
   DongSummary,
   DongsGeoJson,
   DongsResponse,
   ForecastResponse,
   MetaResponse,
+  ModelPerformanceResponse,
 } from './types'
 
 /**
@@ -71,4 +73,23 @@ export const api = {
     get<CompareResponse>(`/api/compare?codes=${codes.join(',')}`, signal),
 
   meta: (signal?: AbortSignal) => get<MetaResponse>('/api/meta', signal),
+
+  /**
+   * 브리핑은 실패해도 다른 지표에 영향이 없어야 한다.
+   * 호출부에서 상태를 분리해 다루도록 에러를 그대로 던진다.
+   */
+  briefing: (
+    codes: string[],
+    options: { date?: string; refresh?: boolean } = {},
+    signal?: AbortSignal,
+  ) => {
+    const params = new URLSearchParams({ codes: codes.join(',') })
+    if (options.date) params.set('date', options.date)
+    if (options.refresh) params.set('refresh', 'true')
+    return get<BriefingResponse>(`/api/briefing?${params}`, signal)
+  },
+
+  /** 화면에서는 기능 제외했지만 계약이 존재해 남겨 둔다. */
+  modelPerformance: (signal?: AbortSignal) =>
+    get<ModelPerformanceResponse>('/api/model-performance', signal),
 }
