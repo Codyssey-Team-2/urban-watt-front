@@ -1,26 +1,68 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ──────────────────────────────────────────────────────────────
+   UrbanWatt 디자인 토큰
+   Tailwind v4는 JS config를 쓰지 않는다. 색/그림자/브레이크포인트는
+   여기 @theme 안에서 정의하고, 클래스명은 v3와 동일하게 나온다.
+     --color-warm-text  ->  text-warm-text / bg-warm-text / border-warm-text
+   ────────────────────────────────────────────────────────────── */
+@theme {
+  /* 브랜드 */
+  --color-brand: #17915c;
+  --color-brand-light: #ddf3e8;
+  --color-brand-dark: #0e5a3a;
+
+  /* 진관동 (안정) */
+  --color-cool: #2e9e6b;
+  --color-cool-fill: #6fc49a;
+  --color-cool-deep: #0e4f33;
+
+  /* 창신동 (위험) */
+  --color-warm: #d2543a;
+  --color-warm-fill: #e8785c;
+  --color-warm-deep: #7a2a18;
+  --color-warm-text: #c64a31;
+  --color-warm-light: #fbe5de;
+  --color-warm-text-dark: #8a3320;
+
+  /* 중립 */
+  --color-ink: #16241d;
+  --color-muted: #5c6e64;
+  --color-faint: #8da396;
+  --color-hair: #edf2ee;
+  --color-mapbase: #edf4ec;
+
+  /* 차트 보조 (모델 A/B = 기상만 계열, 중립 회색-초록) */
+  --color-neutral-line: #b2c0b7;
+  --color-track: #e7eee9;
+
+  /* 패널 그림자: 접촉(1겹) + 주변(2겹). 1겹이면 스티커처럼 보인다. */
+  --shadow-panel: 0 2px 4px rgba(20, 50, 35, 0.05), 0 14px 40px rgba(20, 50, 35, 0.1);
+  --shadow-panel-warm: 0 2px 4px rgba(20, 50, 35, 0.05), 0 14px 40px rgba(150, 60, 40, 0.15);
+
+  /* 1600px는 Tailwind 기본 브레이크포인트에 없다 (2xl=1536). 사이드바 접힘 기준. */
+  --breakpoint-wide: 1600px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* 발표용 단일 라이트 테마. 발표자 노트북이 다크모드여도 화면이 그대로여야 하므로
+   prefers-color-scheme 대응은 의도적으로 두지 않는다. */
+html {
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-mapbase);
+  color: var(--color-ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* 숫자는 전 화면에서 등폭 + 자리수 고정. 자리수가 흔들리면 신뢰감이 깨진다. */
+.tnum {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
 }
