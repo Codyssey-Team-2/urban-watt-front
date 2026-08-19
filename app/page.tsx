@@ -118,9 +118,12 @@ export default function Page() {
             ? `+${d.demand.extraPercent.toFixed(1)}%`
             : '—',
         headlineLabel: point ? '위험선 대비' : '평소 대비 추가 사용',
-        grade: point?.grade ?? d.heat.grade,
-        gradeColor: point?.color ?? d.heat.color,
-        risk: toRisk(point?.grade ?? ''),
+        // 시계열이 없으면 위험 등급이 없다. 도시열 등급을 대신 보여주되
+        // 무엇의 등급인지 밝힌다 — '매우 높음'만 있으면 위험도로 읽힌다.
+        grade: point ? point.grade : `도시열 ${d.heat.grade}`,
+        gradeColor: point ? point.color : d.heat.color,
+        // 패널 강조는 위험 등급에만 건다. 도시열이 높다고 지금 위험한 건 아니다.
+        risk: point ? toRisk(point.grade) : 'stable',
         stats: [
           {
             label: '냉방 시작',
@@ -138,9 +141,9 @@ export default function Page() {
           },
           { label: '나무·풀밭', value: d.cover.green.text ?? '—' },
           {
-            label: point ? '사용량' : '도시열',
+            label: point ? '사용량' : '도시열 지수',
             value: point
-              ? `${Math.round(point.usageKwh).toLocaleString()}kWh`
+              ? `${Math.round(point.usageKwh).toLocaleString()} kWh`
               : d.heat.index != null
                 ? `${d.heat.index}`
                 : '—',

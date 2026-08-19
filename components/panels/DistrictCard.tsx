@@ -84,7 +84,8 @@ export function DistrictCard({ card, className }: DistrictCardProps) {
           <span className="text-[13px] text-faint">{card.headlineLabel}</span>
         </div>
 
-        <div className="mt-4 grid grid-cols-4 gap-3 border-t border-hair pt-3">
+        {/* 4열이면 '10곳 중 6곳' 같은 서버 문구가 잘린다. 2×2로 폭을 준다. */}
+        <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-hair pt-3">
           {card.stats.map((s) => (
             <Stat key={s.label} {...s} />
           ))}
