@@ -28,10 +28,20 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * ngrok 무료 도메인은 브라우저 User-Agent로 오는 요청에 JSON 대신 경고 HTML을
+ * 돌려준다. 이 헤더가 있어야 통과한다. 정식 도메인으로 옮기면 자동으로 빠진다.
+ */
+function headers(): HeadersInit {
+  const base: Record<string, string> = { Accept: 'application/json' }
+  if (API_BASE.includes('ngrok')) base['ngrok-skip-browser-warning'] = 'true'
+  return base
+}
+
 async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     signal,
-    headers: { Accept: 'application/json' },
+    headers: headers(),
     // 발표 중 값이 갱신될 일이 없다. 매번 새로 받을 이유도 없다.
     cache: 'no-store',
   })
