@@ -8,14 +8,7 @@ import { TimeScrubber } from '@/components/controls/TimeScrubber'
 import { DemandChart } from '@/components/panels/DemandChart'
 import { ForecastChart } from '@/components/panels/ForecastChart'
 import { cn } from '@/lib/cn'
-import {
-  DISTRICTS,
-  GURO_CODE,
-  getDemandAt,
-  getExcessAt,
-  getRiskLevel,
-  getTempAt,
-} from '@/lib/mock'
+import { GURO_CODE, getTempAt } from '@/lib/mock'
 import { PLAYBACK_SPEED } from '@/lib/nav'
 import type { ViewProps } from './shared'
 
@@ -24,6 +17,8 @@ export function ChartFocusView({
   scenario,
   onScenarioChange,
   scenarioNote,
+  header,
+  cards,
   hour,
   onHourChange,
   playing,
@@ -38,8 +33,8 @@ export function ChartFocusView({
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-5">
       <div className="flex flex-wrap items-start gap-5">
-        <HeaderCard hour={hour} />
-        <WeatherChips hour={hour} />
+        <HeaderCard hour={hour} header={header} />
+        <WeatherChips chips={header.chips} />
         <MicroclimateToggle
           scenario={scenario}
           onChange={onScenarioChange}
@@ -75,59 +70,45 @@ export function ChartFocusView({
           playing={playing}
           onPlayingChange={onPlayingChange}
           stepMs={PLAYBACK_SPEED[settings.playbackSpeed]}
+          source={header.source}
         />
       </Panel>
 
       <div className="flex flex-wrap items-start gap-5">
-        {DISTRICTS.map((district) => {
-          const excess = getExcessAt(district.code, scenario, hour)
-          const temp = getTempAt(district.code, hour)
-          const value = getDemandAt(district.code, scenario, hour)
-          const risk = getRiskLevel(excess)
-          return (
-            <Panel
-              key={district.code}
-              accent={district.variant}
-              className="min-w-[240px] flex-1"
-            >
-              <div className="flex items-center gap-6 px-5 py-4">
-                <div>
-                  <div className="text-[13px] text-faint">{district.name}</div>
-                  <div
-                    className={cn(
-                      'tnum text-[24px] font-semibold leading-tight',
-                      risk === 'danger' ? 'text-danger-text' : 'text-ink',
-                    )}
-                  >
-                    {value.toFixed(1)}
-                    <span className="ml-1 text-[13px] font-normal text-faint">
-                      MW
-                    </span>
-                  </div>
+        {cards.map((card) => (
+          <Panel
+            key={card.code}
+            accent={card.variant}
+            className="min-w-[280px] flex-1"
+          >
+            <div className="flex items-center gap-6 px-5 py-4">
+              <div className="min-w-0">
+                <div className="text-[13px] text-faint">{card.name}</div>
+                <div
+                  className={cn(
+                    'tnum text-[24px] font-semibold leading-tight',
+                    card.risk === 'danger' ? 'text-danger-text' : 'text-ink',
+                  )}
+                >
+                  {card.headline}
                 </div>
-                <div className="border-l border-hair pl-6">
-                  <div className="text-[13px] text-faint">평시 대비</div>
-                  <div className="tnum text-[15px] font-semibold">
-                    +{Math.round(excess)}%
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[13px] text-faint">S-DoT 실측</div>
-                  <div className="tnum text-[15px] font-semibold">
-                    {temp.sdot.toFixed(1)}°C
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[13px] text-faint">대표기상</div>
-                  <div className="tnum text-[15px] text-muted">
-                    {temp.asos.toFixed(1)}°C
-                  </div>
-                </div>
+                <div className="text-[13px] text-faint">{card.headlineLabel}</div>
               </div>
-            </Panel>
-          )
-        })}
-
+              <div className="flex min-w-0 flex-1 gap-5 border-l border-hair pl-6">
+                {card.stats.slice(0, 3).map((st) => (
+                  <div key={st.label} className="min-w-0">
+                    <div className="truncate text-[13px] text-faint">
+                      {st.label}
+                    </div>
+                    <div className="tnum truncate text-[15px] text-ink">
+                      {st.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Panel>
+        ))}
       </div>
 
       <div className="text-[13px] text-faint">

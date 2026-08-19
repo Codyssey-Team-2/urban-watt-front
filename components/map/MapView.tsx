@@ -11,15 +11,34 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import {
   DISTRICTS,
   DISTRICT_BOUNDS,
+  DISTRICT_GEOJSON,
   HAN_RIVER,
   MAP_PADDING,
   SEOUL_MUNICIPALITIES,
   SEOUL_OUTLINE,
-  districtFeatures,
-  getExcessAt,
-  getRiskLevel,
 } from '@/lib/mock'
-import type { ScenarioKey } from '@/lib/types'
+import type { MapDistrict } from '@/components/views/shared'
+
+/** 로컬 경계에 서버가 준 스타일을 얹는다. 경계는 아직 서버에 없다. */
+function styled(districts: MapDistrict[]) {
+  return {
+    type: 'FeatureCollection' as const,
+    features: DISTRICT_GEOJSON.features.map((f) => {
+      const d = districts.find((x) => x.code === f.properties.code)
+      return {
+        ...f,
+        properties: {
+          code: f.properties.code,
+          name: f.properties.name,
+          fillColor: d?.fillColor ?? '#CCCCCC',
+          fillOpacity: d?.fillOpacity ?? 0.3,
+          strokeColor: d?.strokeColor ?? '#999999',
+          danger: d?.danger ?? false,
+        },
+      }
+    }),
+  }
+}
 
 export interface Viewport {
   west: number
@@ -35,9 +54,8 @@ export interface MapController {
 }
 
 interface MapViewProps {
-  scenario: ScenarioKey
-  /** 선택 시각. 폴리곤 채색이 시각별 초과율을 따라간다. */
-  hour: number
+  /** 폴리곤 채색과 마커 내용. 색은 서버 등급 색을 그대로 받는다. */
+  districts: MapDistrict[]
   /** 뷰마다 패널이 가리는 영역이 달라 여백도 달라진다. */
   padding?: { top: number; bottom: number; left: number; right: number }
   showLabels?: boolean
@@ -69,8 +87,7 @@ const BLANK_STYLE = {
 }
 
 export function MapView({
-  scenario,
-  hour,
+  districts,
   padding = MAP_PADDING,
   showLabels = true,
   onReady,
@@ -84,9 +101,12 @@ export function MapView({
   // 여백은 뷰 전환마다 바뀌지만 지도는 다시 만들지 않는다.
   // 생성 effect가 최신 값을 읽도록 ref로만 흘려보낸다.
   const paddingRef = useRef(padding)
+  // 생성 effect가 최신 스타일을 읽도록 ref로 흘려보낸다.
+  const districtsRef = useRef(districts)
   useEffect(() => {
     paddingRef.current = padding
-  }, [padding])
+    districtsRef.current = districts
+  }, [padding, districts])
 
   // 지도 인스턴스는 한 번만 만든다. scenario는 아래 별도 effect에서 데이터만 갈아끼운다.
   useEffect(() => {
@@ -138,40 +158,16 @@ export function MapView({
         paint: { 'line-color': '#D2E0D1', 'line-width': 1 },
       })
 
-      map.addSource(SRC, {
-        type: 'geojson',
-        data: districtFeatures(scenario, hour),
-      })
+      map.addSource(SRC, { type: 'geojson', data: styled(districtsRef.current) })
       map.addLayer({
         id: 'district-fill',
         type: 'fill',
         source: SRC,
         paint: {
-          // 평소에는 지역 정체성 색(진하기가 초과율), 위험 상태에서는 채움까지 빨강.
-          'fill-color': [
-            'case',
-            ['==', ['get', 'risk'], 'danger'],
-            '#E57373',
-            [
-              'match',
-              ['get', 'variant'],
-              'cool',
-              '#6FC49A',
-              'urban',
-              '#7FA9E8',
-              '#CCCCCC',
-            ],
-          ],
+          // 색과 투명도는 서버가 정한 등급을 그대로 받아 쓴다.
+          'fill-color': ['get', 'fillColor'],
           'fill-color-transition': { duration: 200 },
-          'fill-opacity': [
-            'interpolate',
-            ['linear'],
-            ['get', 'excess'],
-            10,
-            0.2,
-            50,
-            0.66,
-          ],
+          'fill-opacity': ['get', 'fillOpacity'],
           'fill-opacity-transition': { duration: 200 },
         },
       })
@@ -180,31 +176,9 @@ export function MapView({
         type: 'line',
         source: SRC,
         paint: {
-          // 채움은 지역 정체성, 테두리는 상태. 위험할 때만 빨강 테두리가 나온다.
-          'line-color': [
-            'case',
-            ['==', ['get', 'risk'], 'danger'],
-            '#C62828',
-            [
-              'match',
-              ['get', 'variant'],
-              'cool',
-              '#2E9E6B',
-              'urban',
-              '#2D6FD1',
-              '#999999',
-            ],
-          ],
+          'line-color': ['get', 'strokeColor'],
           'line-color-transition': { duration: 200 },
-          'line-width': [
-            'interpolate',
-            ['linear'],
-            ['get', 'excess'],
-            10,
-            2,
-            50,
-            4,
-          ],
+          'line-width': ['case', ['get', 'danger'], 4, 2.5],
           'line-width-transition': { duration: 200 },
         },
       })
@@ -242,18 +216,17 @@ export function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 토글과 시각이 바뀌면 지도 색이 즉시 따라간다.
-  // 지도를 다시 만들지 않고 소스 데이터만 갈아끼운다.
+  // 값이 바뀌면 지도를 다시 만들지 않고 소스 데이터만 갈아끼운다.
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
     const apply = () => {
       const source = map.getSource<GeoJSONSource>(SRC)
-      source?.setData(districtFeatures(scenario, hour))
+      source?.setData(styled(districts))
     }
     if (map.isStyleLoaded() && map.getSource(SRC)) apply()
     else map.once('idle', apply)
-  }, [scenario, hour])
+  }, [districts])
 
   return (
     <>
@@ -261,9 +234,7 @@ export function MapView({
           position:relative가 absolute를 덮어써서 inset-0이 높이를 만들지 못한다.
           위치가 아니라 크기로 채운다. */}
       <div ref={containerRef} className="size-full" />
-      {showLabels && (
-        <MapLabels scenario={scenario} hour={hour} map={readyMap} />
-      )}
+      {showLabels && <MapLabels districts={districts} map={readyMap} />}
     </>
   )
 }
@@ -273,59 +244,64 @@ export function MapView({
  * symbol 레이어의 텍스트는 glyph 서버를 필요로 해서, 타일 없는 구성과 맞지 않는다.
  */
 function MapLabels({
-  scenario,
-  hour,
+  districts,
   map,
 }: {
-  scenario: ScenarioKey
-  hour: number
+  districts: MapDistrict[]
   map: MapLibreMap | null
 }) {
-  const markersRef = useRef<{ marker: Marker; value: HTMLElement }[]>([])
+  const markersRef = useRef<
+    { marker: Marker; name: HTMLElement; value: HTMLElement }[]
+  >([])
 
   // 마커는 지도당 한 번만 만든다. 재생 중 매 시각마다 DOM을 새로 만들면
   // 지도 위에서 라벨이 깜빡인다.
   useEffect(() => {
     if (!map) return
-
     markersRef.current = DISTRICTS.map((district) => {
-      const urban = district.variant === 'urban'
-
       const el = document.createElement('div')
       el.className = 'flex flex-col items-center gap-1'
       el.innerHTML = `
         <div class="rounded-full border border-[rgba(22,60,42,0.10)] bg-white/96 px-3 py-1.5 shadow-panel backdrop-blur-[14px]">
           <div class="flex items-center gap-2 whitespace-nowrap">
-            <span class="text-[15px] font-semibold ${urban ? 'text-urban-deep' : 'text-cool-deep'}">${district.name}</span>
+            <span data-name class="text-[15px] font-semibold"></span>
             <span data-value class="tnum text-[15px] font-semibold"></span>
           </div>
         </div>
-        <div class="size-2.5 rotate-45 rounded-[2px] border-2 border-white" style="background:${urban ? '#2D6FD1' : '#2E9E6B'}"></div>
+        <div data-pin class="size-2.5 rotate-45 rounded-[2px] border-2 border-white"></div>
       `
       const marker = new Marker({ element: el, anchor: 'bottom' })
         .setLngLat(district.center)
         .addTo(map)
-      return { marker, value: el.querySelector('[data-value]') as HTMLElement }
+      return {
+        marker,
+        name: el.querySelector('[data-name]') as HTMLElement,
+        value: el.querySelector('[data-value]') as HTMLElement,
+      }
     })
-
     return () => {
       markersRef.current.forEach(({ marker }) => marker.remove())
       markersRef.current = []
     }
   }, [map])
 
-  // 수치만 갱신한다.
+  // 내용만 갱신한다.
   useEffect(() => {
-    markersRef.current.forEach(({ value }, i) => {
-      const excess = getExcessAt(DISTRICTS[i].code, scenario, hour)
-      value.textContent = `+${Math.round(excess)}%`
+    markersRef.current.forEach((m, i) => {
+      const d = districts[i]
+      if (!d) return
+      m.name.textContent = d.name
+      m.name.style.color =
+        d.variant === 'cool' ? 'var(--color-cool-deep)' : 'var(--color-urban-deep)'
+      m.value.textContent = d.headline
       // 카드와 같은 규칙 — 평소엔 검정, 위험일 때만 빨강
-      value.style.color =
-        getRiskLevel(excess) === 'danger'
-          ? 'var(--color-danger-text)'
-          : 'var(--color-ink)'
+      m.value.style.color = d.danger
+        ? 'var(--color-danger-text)'
+        : 'var(--color-ink)'
+      const pin = m.marker.getElement().querySelector('[data-pin]') as HTMLElement
+      if (pin) pin.style.background = d.strokeColor
     })
-  }, [scenario, hour, map])
+  }, [districts, map])
 
   return null
 }

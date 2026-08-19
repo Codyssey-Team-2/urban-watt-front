@@ -1,62 +1,59 @@
 import { Panel } from '@/components/layout/Panel'
+import { cn } from '@/lib/cn'
 import {
+  ClockIcon,
   DropletIcon,
   TemperatureIcon,
   WindIcon,
 } from '@/components/ui/icons'
-import { GURO_CODE, WEATHER, getTempAt } from '@/lib/mock'
-import { cn } from '@/lib/cn'
+import type { WeatherChip } from '@/components/views/shared'
 import type { ComponentType } from 'react'
 
-interface ChipProps {
-  icon: ComponentType<{ size?: number; className?: string }>
-  label: string
-  value: string
-  emphasize?: boolean
-}
-
-function Chip({ icon: Icon, label, value, emphasize }: ChipProps) {
-  return (
-    <div className="flex items-center gap-2">
-      <Icon
-        size={16}
-        className={cn('flex-none', emphasize ? 'text-danger-text' : 'text-muted')}
-      />
-      <div>
-        <div className="text-[13px] leading-tight text-faint">{label}</div>
-        <div
-          className={cn(
-            'tnum text-[15px] font-semibold leading-tight',
-            emphasize ? 'text-danger-text' : 'text-ink',
-          )}
-        >
-          {value}
-        </div>
-      </div>
-    </div>
-  )
+const ICONS: Record<WeatherChip['key'], ComponentType<{ size?: number; className?: string }>> = {
+  humidity: DropletIcon,
+  wind: WindIcon,
+  sdot: TemperatureIcon,
+  riskDays: ClockIcon,
+  pattern: ClockIcon,
 }
 
 interface WeatherChipsProps {
-  hour: number
+  chips: WeatherChip[]
 }
 
-export function WeatherChips({ hour }: WeatherChipsProps) {
-  // 격차는 시각에 따라 달라진다 — 낮에 벌어지고 새벽에 좁혀지는 게 핵심이라
-  // 고정값이 아니라 선택된 시각의 실측 차이를 보여준다.
-  const temp = getTempAt(GURO_CODE, hour)
-  const gap = Math.round((temp.sdot - temp.asos) * 10) / 10
+/** 값이 없는 항목은 애초에 배열에 없다. 전부 비면 패널 자체를 그리지 않는다. */
+export function WeatherChips({ chips }: WeatherChipsProps) {
+  if (chips.length === 0) return null
 
   return (
     <Panel className="flex items-center gap-6 px-4 py-3">
-      <Chip
-        icon={TemperatureIcon}
-        label="S-DoT 격차"
-        value={`${gap > 0 ? '+' : ''}${gap.toFixed(1)}°C`}
-        emphasize={gap > 0}
-      />
-      <Chip icon={DropletIcon} label="습도" value={`${WEATHER.humidity}%`} />
-      <Chip icon={WindIcon} label="풍속" value={`${WEATHER.windSpeed}m/s`} />
+      {chips.map((chip) => {
+        const Icon = ICONS[chip.key]
+        return (
+          <div key={chip.key} className="flex items-center gap-2">
+            <Icon
+              size={16}
+              className={cn(
+                'flex-none',
+                chip.emphasize ? 'text-danger-text' : 'text-muted',
+              )}
+            />
+            <div>
+              <div className="whitespace-nowrap text-[13px] leading-tight text-faint">
+                {chip.label}
+              </div>
+              <div
+                className={cn(
+                  'tnum whitespace-nowrap text-[15px] font-semibold leading-tight',
+                  chip.emphasize ? 'text-danger-text' : 'text-ink',
+                )}
+              >
+                {chip.value}
+              </div>
+            </div>
+          </div>
+        )
+      })}
     </Panel>
   )
 }
