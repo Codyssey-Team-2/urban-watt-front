@@ -63,7 +63,7 @@ export function ChartFocusView({
           const excess = getExcessAt(district.code, scenario, hour)
           const temp = getTempAt(district.code, hour)
           const value = getDemandAt(district.code, scenario, hour)
-          const warm = district.variant === 'warm'
+          const urban = district.variant === 'urban'
           return (
             <Panel
               key={district.code}
@@ -76,7 +76,7 @@ export function ChartFocusView({
                   <div
                     className={cn(
                       'tnum text-[24px] font-semibold leading-tight',
-                      warm ? 'text-warm-text' : 'text-ink',
+                      urban ? 'text-urban-text' : 'text-ink',
                     )}
                   >
                     {value.toFixed(1)}

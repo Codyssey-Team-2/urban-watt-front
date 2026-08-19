@@ -84,6 +84,9 @@ export interface ForecastPoint extends Graded {
   baseline_kwh: number
   extra_percent: number
   temperature: number
+  /** 원자료가 없으면 null */
+  humidity: number | null
+  wind: number | null
   /** 실측 ÷ 위험선 */
   risk_ratio: number
 }
@@ -148,6 +151,8 @@ export interface DongPin extends Graded {
 
 export interface DongsResponse {
   dongs: DongPin[]
+  /** 좌표를 어디서 뽑았는지 (경계 centroid 등) */
+  latlng_source?: string
 }
 
 export interface CompareRow {
@@ -162,10 +167,59 @@ export interface CompareResponse {
   rows: CompareRow[]
 }
 
+/**
+ * 지금 이 서버가 무엇으로 답하고 있는지와 아직 못 만드는 항목.
+ * 시연 중 '이 부분은 데이터 확보 중'을 화면이 스스로 말하게 하기 위한 것.
+ */
 export interface MetaResponse {
-  mode?: string
-  pending?: string[]
-  note?: string | null
+  service: string
+  version: string
+  mode: 'live' | 'snapshot'
+  mode_text: string
+  period: Record<string, string>
+  llm: Record<string, unknown>
+  dongs: Record<string, unknown>[]
+  pending: string[]
+  caveats: string[]
+}
+
+/** 모델 성능. 화면에서는 기능 제외했지만 계약은 남겨 둔다. */
+export interface ModelMetric {
+  key: 'a' | 'b' | 'c'
+  label: string
+  mape: number | null
+  rmse: number | null
+  mae: number | null
+}
+
+export interface ModelPerformanceResponse {
+  status: DataStatus
+  metric: string
+  models: ModelMetric[]
+  improvement_percent: number | null
+  improvement_basis: string | null
+  note: string | null
+  caveat: string | null
+}
+
+/**
+ * AI 브리핑. 모델은 분석하지 않고 이미 끝난 분석을 문장으로 옮긴다.
+ *
+ * `unverified_numbers` 가 비어 있지 않으면 사실표에 없는 숫자가 섞인 것이다.
+ * 화면에 그대로 내보내기 전에 확인이 필요하다는 신호로 쓴다.
+ */
+export interface BriefingResponse {
+  codes: string[]
+  date: string | null
+  status: DataStatus
+  text: string
+  provider: string | null
+  model: string | null
+  usage: Record<string, unknown> | null
+  unverified_numbers: string[]
+  note: string | null
+  facts: Record<string, unknown>
+  prompt: { system: string; user: string } | null
 }
 
 /** 법정동코드는 10자리. 이름으로 조회하지 않는다. */

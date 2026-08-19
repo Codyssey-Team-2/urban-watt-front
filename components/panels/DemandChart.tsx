@@ -34,7 +34,7 @@ const Y_AXIS: Record<TabKey, { domain: [number, number]; ticks: number[] } | nul
   }
 
 const COOL = 'var(--color-cool)'
-const WARM = 'var(--color-warm)'
+const URBAN = 'var(--color-urban)'
 const BASE = 'var(--color-neutral-line)'
 
 type MarkerShape = 'circle' | 'diamond' | 'none'
@@ -59,7 +59,7 @@ interface Series {
 const SERIES: Record<TabKey, Series[]> = {
   demand: [
     { key: 'jingwan', name: '진관동', color: COOL, shape: 'circle' },
-    { key: 'guro', name: '구로동', color: WARM, shape: 'diamond' },
+    { key: 'guro', name: '구로동', color: URBAN, shape: 'diamond' },
     {
       key: 'guroBase',
       name: '구로동 · 기상만',
@@ -70,12 +70,12 @@ const SERIES: Record<TabKey, Series[]> = {
   ],
   temp: [
     { key: 'jingwanTemp', name: '진관동', color: COOL, shape: 'circle' },
-    { key: 'guroTemp', name: '구로동', color: WARM, shape: 'diamond' },
+    { key: 'guroTemp', name: '구로동', color: URBAN, shape: 'diamond' },
     { key: 'asos', name: '대표기상', color: BASE, dashed: true, shape: 'none' },
   ],
   error: [
     { key: 'jingwanErr', name: '진관동', color: COOL, shape: 'circle' },
-    { key: 'guroErr', name: '구로동', color: WARM, shape: 'diamond' },
+    { key: 'guroErr', name: '구로동', color: URBAN, shape: 'diamond' },
   ],
 }
 
@@ -199,12 +199,12 @@ export function DemandChart({
             )}
             <ReferenceLine
               x={PEAK_HOUR}
-              stroke="var(--color-warm-fill)"
+              stroke="var(--color-danger-fill)"
               strokeDasharray="3 3"
               label={{
                 value: '피크',
                 position: 'top',
-                fill: 'var(--color-warm-text)',
+                fill: 'var(--color-danger-text)',
                 fontSize: 12,
               }}
             />

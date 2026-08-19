@@ -2,10 +2,11 @@ import { Panel } from '@/components/layout/Panel'
 import { cn } from '@/lib/cn'
 import type { District, RiskLevel } from '@/lib/types'
 
+/** 배지는 상태만 나타낸다. 지역 정체성 색과 섞지 않는다. */
 const RISK: Record<RiskLevel, { label: string; className: string }> = {
   stable: { label: '안정', className: 'bg-brand-light text-brand-dark' },
-  caution: { label: '주의', className: 'bg-warm-light text-warm-text-dark' },
-  danger: { label: '위험', className: 'bg-warm text-white' },
+  caution: { label: '주의', className: 'bg-caution-light text-caution-text' },
+  danger: { label: '위험', className: 'bg-danger text-white' },
 }
 
 interface DistrictCardProps {
@@ -33,7 +34,7 @@ function Stat({
       <div
         className={cn(
           'tnum mt-0.5 text-[15px] leading-tight',
-          emphasize ? 'font-semibold text-warm-text' : 'text-ink',
+          emphasize ? 'font-semibold text-urban-text' : 'text-ink',
         )}
       >
         {value}
@@ -49,13 +50,13 @@ export function DistrictCard({
   demand,
   className,
 }: DistrictCardProps) {
-  const warm = district.variant === 'warm'
+  const urban = district.variant === 'urban'
   const riskStyle = RISK[risk]
   const { balancePoint, coolingSlope, vegetationRate } = district.microclimate
 
   return (
     <Panel
-      tone={warm && risk === 'danger' ? 'warm' : 'default'}
+      tone={risk === 'danger' ? 'danger' : 'default'}
       accent={district.variant}
       className={cn('transition-colors duration-200', className)}
     >
@@ -78,7 +79,12 @@ export function DistrictCard({
           <span
             className={cn(
               'tnum text-[40px] font-semibold leading-none tracking-[-0.02em] transition-colors duration-200',
-              warm ? 'text-warm-text' : 'text-ink',
+              // 평소에는 지역 정체성 색, 위험 상태에서만 빨강으로 바뀐다.
+              risk === 'danger'
+                ? 'text-danger-text'
+                : urban
+                  ? 'text-urban-text'
+                  : 'text-ink',
             )}
           >
             +{Math.round(excess)}%
@@ -91,7 +97,7 @@ export function DistrictCard({
           <Stat
             label="기울기"
             value={`${coolingSlope.toFixed(1)}×`}
-            emphasize={warm}
+            emphasize={urban}
           />
           <Stat label="식생" value={`${vegetationRate}%`} />
           <Stat label="예측수요" value={`${demand.toFixed(1)}MW`} />

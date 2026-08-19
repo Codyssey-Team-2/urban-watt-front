@@ -38,7 +38,7 @@ export function MapFocusView({
               className="h-2.5 w-24 rounded-full"
               style={{
                 background:
-                  'linear-gradient(90deg, rgba(111,196,154,0.25), rgba(232,120,92,0.75))',
+                  'linear-gradient(90deg, rgba(111,196,154,0.25), rgba(127,169,232,0.85))',
               }}
             />
             <span className="tnum text-[13px] text-faint">+10% → +50%</span>
@@ -58,12 +58,12 @@ export function MapFocusView({
           {DISTRICTS.map((district) => {
             const excess = getExcessAt(district.code, scenario, hour)
             const risk = getRiskLevel(excess)
-            const warm = district.variant === 'warm'
+            const urban = district.variant === 'urban'
             return (
               <Panel
                 key={district.code}
                 accent={district.variant}
-                tone={warm && risk === 'danger' ? 'warm' : 'default'}
+                tone={risk === 'danger' ? 'danger' : 'default'}
                 className="w-[196px]"
               >
                 <div className="px-4 pb-4 pt-3">
@@ -78,7 +78,11 @@ export function MapFocusView({
                   <div
                     className={cn(
                       'tnum mt-2 text-[40px] font-semibold leading-none tracking-[-0.02em] transition-colors duration-200',
-                      warm ? 'text-warm-text' : 'text-ink',
+                      risk === 'danger'
+                        ? 'text-danger-text'
+                        : urban
+                          ? 'text-urban-text'
+                          : 'text-ink',
                     )}
                   >
                     +{Math.round(excess)}%

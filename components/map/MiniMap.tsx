@@ -96,14 +96,14 @@ export function MiniMap({ viewport, className }: MiniMapProps) {
         )}
         {DISTRICTS.map((d) => {
           const [x, y] = project(d.center)
-          const warm = d.variant === 'warm'
+          const urban = d.variant === 'urban'
           return (
             <circle
               key={d.code}
               cx={x}
               cy={y}
               r={4.5}
-              fill={warm ? 'var(--color-warm)' : 'var(--color-cool)'}
+              fill={urban ? 'var(--color-urban)' : 'var(--color-cool)'}
               stroke="#fff"
               strokeWidth={1.5}
             />
@@ -120,7 +120,7 @@ export function MiniMap({ viewport, className }: MiniMapProps) {
             <span
               aria-hidden
               className={`inline-block size-2 rounded-full ${
-                d.variant === 'warm' ? 'bg-warm' : 'bg-cool'
+                d.variant === 'urban' ? 'bg-urban' : 'bg-cool'
               }`}
             />
             {d.name}

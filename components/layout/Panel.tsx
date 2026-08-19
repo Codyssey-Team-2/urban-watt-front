@@ -4,10 +4,10 @@ import { cn } from '@/lib/cn'
 interface PanelProps {
   children: ReactNode
   className?: string
-  /** 구로동 카드처럼 위험을 강조해야 하는 패널 */
-  tone?: 'default' | 'warm'
+  /** 위험 상태를 강조해야 하는 패널. 지역 정체성이 아니라 상태를 뜻한다. */
+  tone?: 'default' | 'danger'
   /** 카드 상단 3px 컬러바 */
-  accent?: 'cool' | 'warm' | null
+  accent?: 'cool' | 'urban' | null
 }
 
 /**
@@ -28,8 +28,8 @@ export function Panel({
         'pointer-events-auto rounded-2xl border bg-white/96 backdrop-blur-[14px]',
         // 토글 시 tone이 바뀌면 테두리와 그림자가 같이 움직여야 한 몸으로 보인다.
         'transition-[border-color,box-shadow] duration-200',
-        tone === 'warm'
-          ? 'border-[rgba(210,84,58,0.30)] shadow-panel-warm'
+        tone === 'danger'
+          ? 'border-[rgba(198,40,40,0.30)] shadow-panel-danger'
           : 'border-[rgba(22,60,42,0.10)] shadow-panel',
         accent && 'overflow-hidden',
         className,
@@ -37,7 +37,7 @@ export function Panel({
     >
       {accent && (
         <div
-          className={cn('h-[3px]', accent === 'cool' ? 'bg-cool' : 'bg-warm')}
+          className={cn('h-[3px]', accent === 'cool' ? 'bg-cool' : 'bg-urban')}
         />
       )}
       {children}

@@ -72,8 +72,8 @@ export function DataInfoView() {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-5 overflow-y-auto pr-1">
       {/* 데모 데이터라는 사실을 화면에서 숨기지 않는다. */}
-      <Panel tone="warm" className="px-6 py-4">
-        <div className="text-[15px] font-semibold text-warm-text-dark">
+      <Panel tone="danger" className="px-6 py-4">
+        <div className="text-[15px] font-semibold text-danger-text-dark">
           현재 화면의 수치는 목데이터입니다
         </div>
         <p className="mt-1 text-[13px] leading-relaxed text-muted">
@@ -138,14 +138,14 @@ export function DataInfoView() {
           <tbody>
             {DISTRICTS.map((d) => {
               const m = d.microclimate
-              const warm = d.variant === 'warm'
+              const urban = d.variant === 'urban'
               return (
                 <tr key={d.code} className="border-b border-hair last:border-0">
                   <td className="py-2.5">
                     <span className="flex items-center gap-2 text-[15px] text-ink">
                       <span
                         aria-hidden
-                        className={`inline-block size-2 rounded-full ${warm ? 'bg-warm' : 'bg-cool'}`}
+                        className={`inline-block size-2 rounded-full ${urban ? 'bg-urban' : 'bg-cool'}`}
                       />
                       {d.name}
                     </span>
@@ -161,7 +161,7 @@ export function DataInfoView() {
                     {m.balancePoint.toFixed(1)}°C
                   </td>
                   <td
-                    className={`tnum py-2.5 text-right text-[15px] ${warm ? 'font-semibold text-warm-text' : ''}`}
+                    className={`tnum py-2.5 text-right text-[15px] ${urban ? 'font-semibold text-urban-text' : ''}`}
                   >
                     {m.coolingSlope.toFixed(1)}×
                   </td>

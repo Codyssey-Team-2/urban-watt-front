@@ -8,7 +8,7 @@ export type RiskLevel = 'stable' | 'caution' | 'danger'
 export interface District {
   code: string // 법정동 코드
   name: string // '진관동'
-  variant: 'cool' | 'warm'
+  variant: 'cool' | 'urban'
   center: [number, number] // [lng, lat]
   microclimate: {
     vegetationRate: number // 식생피복률 %

@@ -152,8 +152,8 @@ export function MapView({
             ['get', 'variant'],
             'cool',
             '#6FC49A',
-            'warm',
-            '#E8785C',
+            'urban',
+            '#7FA9E8',
             '#CCCCCC',
           ],
           'fill-opacity': [
@@ -173,15 +173,22 @@ export function MapView({
         type: 'line',
         source: SRC,
         paint: {
+          // 채움은 지역 정체성, 테두리는 상태. 위험할 때만 빨강 테두리가 나온다.
           'line-color': [
-            'match',
-            ['get', 'variant'],
-            'cool',
-            '#2E9E6B',
-            'warm',
-            '#D2543A',
-            '#999999',
+            'case',
+            ['==', ['get', 'risk'], 'danger'],
+            '#C62828',
+            [
+              'match',
+              ['get', 'variant'],
+              'cool',
+              '#2E9E6B',
+              'urban',
+              '#2D6FD1',
+              '#999999',
+            ],
           ],
+          'line-color-transition': { duration: 200 },
           'line-width': [
             'interpolate',
             ['linear'],
@@ -275,18 +282,18 @@ function MapLabels({
     if (!map) return
 
     markersRef.current = DISTRICTS.map((district) => {
-      const warm = district.variant === 'warm'
+      const urban = district.variant === 'urban'
 
       const el = document.createElement('div')
       el.className = 'flex flex-col items-center gap-1'
       el.innerHTML = `
         <div class="rounded-full border border-[rgba(22,60,42,0.10)] bg-white/96 px-3 py-1.5 shadow-panel backdrop-blur-[14px]">
           <div class="flex items-center gap-2 whitespace-nowrap">
-            <span class="text-[15px] font-semibold ${warm ? 'text-warm-deep' : 'text-cool-deep'}">${district.name}</span>
-            <span data-value class="tnum text-[15px] font-semibold ${warm ? 'text-warm-text' : 'text-cool'}"></span>
+            <span class="text-[15px] font-semibold ${urban ? 'text-urban-deep' : 'text-cool-deep'}">${district.name}</span>
+            <span data-value class="tnum text-[15px] font-semibold ${urban ? 'text-urban-text' : 'text-cool'}"></span>
           </div>
         </div>
-        <div class="size-2.5 rotate-45 rounded-[2px] border-2 border-white" style="background:${warm ? '#D2543A' : '#2E9E6B'}"></div>
+        <div class="size-2.5 rotate-45 rounded-[2px] border-2 border-white" style="background:${urban ? '#2D6FD1' : '#2E9E6B'}"></div>
       `
       const marker = new Marker({ element: el, anchor: 'bottom' })
         .setLngLat(district.center)
