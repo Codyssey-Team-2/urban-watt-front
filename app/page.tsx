@@ -146,14 +146,15 @@ export default function Page() {
                 ? `${d.cooling.switchOnTemp.toFixed(1)}°C`
                 : '—',
           },
-          {
-            label: '1℃당',
-            value:
-              d.cooling.sensitivity != null
-                ? `${d.cooling.sensitivity.toFixed(2)}%`
-                : '—',
-          },
           { label: '나무·풀밭', value: d.cover.green.text ?? '—' },
+          {
+            label: '여름 위험일',
+            value:
+              d.peak.riskDays != null && d.peak.totalDays != null
+                ? `${d.peak.totalDays}일 중 ${d.peak.riskDays}일`
+                : '—',
+            emphasize: true,
+          },
           {
             label: point ? '사용량' : '도시열 지수',
             value: point
@@ -258,7 +259,7 @@ export default function Page() {
       }
     }
 
-    const { districts, days, meta } = dashboard.data
+    const { days, meta } = dashboard.data
     const day = Object.values(days)[0]
     const chips: WeatherChip[] = []
     // 계약대로 원자료가 없는 값은 칩을 아예 만들지 않는다.
@@ -274,22 +275,6 @@ export default function Page() {
         label: '풍속',
         value: `${day.weather.wind}m/s`,
       })
-    // 빈자리는 서버가 이미 문장으로 만들어 준 값으로 채운다.
-    const withRisk = districts.find((d) => d.peak.riskDaysText)
-    if (withRisk?.peak.riskDaysText)
-      chips.push({
-        key: 'riskDays',
-        label: `${withRisk.name} 위험일`,
-        value: withRisk.peak.riskDaysText.replace(/^여름 /, ''),
-      })
-    const withPattern = districts.find((d) => d.demand.pattern)
-    if (withPattern?.demand.pattern)
-      chips.push({
-        key: 'pattern',
-        label: `${withPattern.name} 수요 패턴`,
-        value: withPattern.demand.pattern,
-      })
-
     return {
       date: (day?.date ?? meta.period?.start ?? '').replace(/-/g, '.'),
       tMax: day?.weather.tMax ?? null,
