@@ -109,6 +109,8 @@ export interface ForecastResponse {
   code: string
   name: string
   date: string
+  /** 어떤 시나리오로 답한 것인지 서버가 되돌려 준다 */
+  scenario: ScenarioName
   threshold_kwh: number
   weather: DayWeather
   points: ForecastPoint[]
@@ -186,27 +188,10 @@ export interface MetaResponse {
   dongs: MetaDong[]
   /** 토글 활성화 판단용 */
   forecast_scenarios: Record<ScenarioName, ScenarioStatus>
+  /** 데이터 출처. 항목별로 아직 못 채운 이유까지 함께 온다. */
+  sources: Record<string, MetaSource>
   pending: string[]
   caveats: string[]
-}
-
-/** 모델 성능. 화면에서는 기능 제외했지만 계약은 남겨 둔다. */
-export interface ModelMetric {
-  key: 'a' | 'b' | 'c'
-  label: string
-  mape: number | null
-  rmse: number | null
-  mae: number | null
-}
-
-export interface ModelPerformanceResponse {
-  status: DataStatus
-  metric: string
-  models: ModelMetric[]
-  improvement_percent: number | null
-  improvement_basis: string | null
-  note: string | null
-  caveat: string | null
 }
 
 /**
@@ -235,6 +220,20 @@ export type ScenarioName = 'observed' | 'weather' | 'microclimate'
 export interface ScenarioStatus {
   status: DataStatus
   note: string | null
+}
+
+/**
+ * 출처 한 건. `status`/`note` 는 그 출처에서 아직 못 얻은 값이 있을 때 온다.
+ * 예: ASOS 원자료가 없어 습도·풍속이 null, S-DoT 매핑 미확보로 ΔT 산출 불가.
+ */
+export interface MetaSource {
+  label: string
+  provider: string
+  dataset?: string
+  status?: DataStatus
+  note?: string
+  detail_status?: DataStatus
+  detail_note?: string
 }
 
 /** 동별 시계열 가용 여부. 요청 전에 여기서 확인한다. */

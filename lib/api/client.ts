@@ -6,7 +6,6 @@ import type {
   DongsResponse,
   ForecastResponse,
   MetaResponse,
-  ModelPerformanceResponse,
 } from './types'
 
 /**
@@ -98,8 +97,4 @@ export const api = {
     if (options.refresh) params.set('refresh', 'true')
     return get<BriefingResponse>(`/api/briefing?${params}`, signal)
   },
-
-  /** 화면에서는 기능 제외했지만 계약이 존재해 남겨 둔다. */
-  modelPerformance: (signal?: AbortSignal) =>
-    get<ModelPerformanceResponse>('/api/model-performance', signal),
 }

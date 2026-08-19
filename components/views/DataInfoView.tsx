@@ -4,7 +4,8 @@ import { Panel } from '@/components/layout/Panel'
 import { DISTRICTS, DEMO_DATE } from '@/lib/mock'
 import type { ViewProps } from './shared'
 
-const SOURCES = [
+/** 서버가 sources를 주지 않을 때만 쓰는 대체 목록 */
+const FALLBACK_SOURCES = [
   {
     name: 'S-DoT 도시데이터 센서',
     org: '서울 열린데이터광장',
@@ -25,6 +26,10 @@ const SOURCES = [
     org: '환경부',
     detail: '식생피복률·불투수피복률. 도시공간 변수로 사용.',
   },
+]
+
+/** 지도 배경은 앱이 직접 들고 있는 자산이라 서버 목록과 별개로 항상 싣는다. */
+const MAP_SOURCES = [
   {
     name: '서울시 행정경계',
     org: 'southkorea/seoul-maps',
@@ -102,20 +107,54 @@ export function DataInfoView({ dashboard }: ViewProps) {
 
       <Section title="데이터 출처">
         <ul className="flex flex-col gap-3">
-          {SOURCES.map((s) => (
-            <li
-              key={s.name}
-              className="flex gap-4 border-b border-hair pb-3 last:border-0 last:pb-0"
-            >
-              <div className="w-[200px] flex-none">
-                <div className="text-[15px] text-ink">{s.name}</div>
-                <div className="text-[13px] text-faint">{s.org}</div>
-              </div>
-              <p className="min-w-0 flex-1 text-[13px] leading-relaxed text-muted">
-                {s.detail}
-              </p>
-            </li>
-          ))}
+          {(meta
+            ? Object.entries(meta.sources).map(([key, src]) => ({
+                name: src.label,
+                org: [src.provider, src.dataset].filter(Boolean).join(' · '),
+                // 그 출처에서 아직 못 얻은 값이 있으면 이유를 그대로 싣는다.
+                detail: src.note ?? src.detail_note ?? null,
+                pending:
+                  src.status === 'pending' || src.detail_status === 'pending',
+                key,
+              }))
+            : FALLBACK_SOURCES.map((s) => ({
+                name: s.name,
+                org: s.org,
+                detail: s.detail,
+                pending: false,
+                key: s.name,
+              }))
+          )
+            .concat(
+              MAP_SOURCES.map((s) => ({
+                name: s.name,
+                org: s.org,
+                detail: s.detail,
+                pending: false,
+                key: s.name,
+              })),
+            )
+            .map((s) => (
+              <li
+                key={s.key}
+                className="flex gap-4 border-b border-hair pb-3 last:border-0 last:pb-0"
+              >
+                <div className="w-[220px] flex-none">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[15px] text-ink">{s.name}</span>
+                    {s.pending && (
+                      <span className="rounded-full bg-caution-light px-2 py-0.5 text-[13px] text-caution-text">
+                        확보 중
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[13px] text-faint">{s.org}</div>
+                </div>
+                <p className="min-w-0 flex-1 text-[13px] leading-relaxed text-muted">
+                  {s.detail ?? ''}
+                </p>
+              </li>
+            ))}
         </ul>
       </Section>
 
