@@ -199,6 +199,30 @@ export function adaptForecast(dto: ForecastResponse): DayView {
 }
 
 /**
+ * 보간된 위험 비율에 맞는 등급을 고른다.
+ *
+ * 프론트가 경계값을 정하지 않는다. 서버가 보낸 24개 포인트의
+ * (위험비율 → 등급) 대응을 그대로 참조해, 보간값 이하에서 가장 가까운
+ * 포인트의 판정을 가져온다. 등급 기준이 서버에서 바뀌면 여기도 따라간다.
+ *
+ * 이게 없으면 20:36에 96.4%인데 20시 등급 '위험'이 남아 숫자와 배지가 어긋난다.
+ */
+function gradeFor(hours: HourView[], riskPercent: number): HourView {
+  const sorted = [...hours].sort((a, b) => a.riskPercent - b.riskPercent)
+
+  // 등급이 바뀌는 지점의 중간을 경계로 본다. 서버가 어떤 값을 기준으로
+  // 나눴는지 모르더라도, 관측된 전환점 사이 어딘가라는 것은 확실하다.
+  for (let i = 0; i < sorted.length - 1; i += 1) {
+    const lo = sorted[i]
+    const hi = sorted[i + 1]
+    if (lo.grade === hi.grade) continue
+    const boundary = (lo.riskPercent + hi.riskPercent) / 2
+    if (riskPercent < boundary) return lo
+  }
+  return sorted[sorted.length - 1]
+}
+
+/**
  * 정시 사이 값을 선형 보간한다. 재생 중 값이 한 시간씩 끊기면 계단처럼 튄다.
  * 보간 값은 실측이 아니므로 데이터 정보 화면에 그 사실을 밝혀 둔다.
  */
@@ -211,6 +235,8 @@ export function interpolateHour(hours: HourView[], time: number): HourView | nul
   const next = hours.find((h) => h.hour === (i + 1) % 24) ?? cur
   const f = t - i
   const lerp = (a: number, b: number) => Math.round((a + (b - a) * f) * 10) / 10
+  const riskPercent = lerp(cur.riskPercent, next.riskPercent)
+  const judged = gradeFor(hours, riskPercent)
 
   return {
     ...cur,
@@ -223,7 +249,11 @@ export function interpolateHour(hours: HourView[], time: number): HourView | nul
     riskRatio:
       Math.round((cur.riskRatio + (next.riskRatio - cur.riskRatio) * f) * 1000) /
       1000,
-    riskPercent: lerp(cur.riskPercent, next.riskPercent),
-    // 등급·색·문구·문장은 보간하지 않는다. 서버 판정이므로 현재 시각 것을 그대로 쓴다.
+    riskPercent,
+    // 등급·색·문구는 보간하지 않는다. 보간된 비율에 해당하는 서버 판정을 고른다.
+    grade: judged.grade,
+    color: judged.color,
+    message: judged.message,
+    riskText: judged.riskText,
   }
 }
