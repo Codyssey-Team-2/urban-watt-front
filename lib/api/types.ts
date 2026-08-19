@@ -105,15 +105,26 @@ export interface DayWeather {
   heatwave: boolean
 }
 
+/** 예측 모델의 학습 근거. observed 에는 없다. */
+export interface ModelBasis {
+  scenario: 'weather' | 'microclimate'
+  train_end: string
+  train_days: number
+  features: string[]
+  target: string
+  note: string
+}
+
 export interface ForecastResponse {
   code: string
   name: string
   date: string
   /** 어떤 시나리오로 답한 것인지 서버가 되돌려 준다 */
   scenario: ScenarioName
-  threshold_kwh: number
-  weather: DayWeather
+  threshold_kwh: number | null
+  weather: DayWeather | null
   points: ForecastPoint[]
+  model_basis: ModelBasis | null
 }
 
 /** 지도 폴리곤. 스타일까지 서버가 지정한다 — 프론트는 색을 계산하지 않는다. */

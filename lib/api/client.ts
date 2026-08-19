@@ -6,6 +6,7 @@ import type {
   DongsResponse,
   ForecastResponse,
   MetaResponse,
+  ScenarioName,
 } from './types'
 
 /**
@@ -72,11 +73,21 @@ export const api = {
   dong: (code: string, signal?: AbortSignal) =>
     get<DongSummary>(`/api/dong/${code}`, signal),
 
-  forecast: (code: string, date?: string, signal?: AbortSignal) =>
-    get<ForecastResponse>(
-      `/api/dong/${code}/forecast${date ? `?date=${date}` : ''}`,
+  forecast: (
+    code: string,
+    date?: string,
+    scenario?: ScenarioName,
+    signal?: AbortSignal,
+  ) => {
+    const params = new URLSearchParams()
+    if (date) params.set('date', date)
+    if (scenario) params.set('scenario', scenario)
+    const q = params.toString()
+    return get<ForecastResponse>(
+      `/api/dong/${code}/forecast${q ? `?${q}` : ''}`,
       signal,
-    ),
+    )
+  },
 
   compare: (codes: string[], signal?: AbortSignal) =>
     get<CompareResponse>(`/api/compare?codes=${codes.join(',')}`, signal),

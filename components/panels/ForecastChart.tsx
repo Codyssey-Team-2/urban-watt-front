@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import {
   CartesianGrid,
   Line,
@@ -16,61 +17,88 @@ import type { ChartTab } from '@/lib/nav'
 
 const TABS: { key: ChartTab; label: string }[] = [
   { key: 'demand', label: '전력수요' },
-  { key: 'temp', label: '기온' },
   { key: 'error', label: '위험도' },
+  { key: 'temp', label: '기온' },
 ]
 
-interface ForecastChartProps {
+export interface ChartSeries {
+  code: string
+  name: string
+  color: string
   day: DayView
-  districtName: string
-  identityColor: string
+}
+
+interface ForecastChartProps {
+  series: ChartSeries[]
   hour: number
   tab: ChartTab
   onTabChange: (tab: ChartTab) => void
-  /** 비교 대상 동의 시계열이 없을 때의 안내 */
-  missingNote?: string | null
+  /** '기상만' · '미기후 반영' — 지금 보고 있는 예측이 무엇인지 밝힌다 */
+  scenarioLabel?: string
 }
 
 /**
- * 실측 시계열 차트.
+ * 두 동을 함께 그리는 시계열 차트.
  *
- * 계약대로 usage 실선 · baseline 점선 · threshold 가로 기준선을 그린다.
- * 점 색은 서버가 준 등급 색을 그대로 쓴다 — 경계에서 위험으로 넘어가는
- * 순간이 색으로 보이는 게 이 화면의 핵심이다.
+ * 위험도 탭이 기본 비교축이다 — 동마다 위험선(threshold)이 달라서 kWh를
+ * 그대로 겹치면 어느 쪽이 더 위험한지 알 수 없다. 위험선 대비 비율로 보면
+ * 100% 하나로 두 동을 같은 자에 놓을 수 있다.
  */
 export function ForecastChart({
-  day,
-  districtName,
-  identityColor,
+  series,
   hour,
   tab,
   onTabChange,
-  missingNote,
+  scenarioLabel,
 }: ForecastChartProps) {
-  const unit = tab === 'demand' ? 'kWh' : tab === 'temp' ? '°C' : '%'
+  const rows = useMemo(() => {
+    const hours = Array.from({ length: 24 }, (_, h) => h)
+    return hours.map((h) => {
+      const row: Record<string, number | string | null> = { hour: h }
+      series.forEach((s) => {
+        const p = s.day.hours.find((x) => x.hour === h)
+        row[`${s.code}_usage`] = p?.usageKwh ?? null
+        row[`${s.code}_risk`] = p?.riskPercent ?? null
+        row[`${s.code}_color`] = p?.color ?? s.color
+        row[`${s.code}_grade`] = p?.grade ?? ''
+        if (p) row.temperature = p.temperature
+      })
+      return row
+    })
+  }, [series])
 
-  // 자동 눈금은 19k·29k처럼 어중간하게 잡힌다. 탭별로 깔끔한 간격을 만든다.
-  const axis = (() => {
+  const axis = useMemo(() => {
     if (tab === 'demand') {
-      const top = Math.max(day.thresholdKwh, ...day.hours.map((h) => h.usageKwh))
-      const max = Math.ceil(top / 10000) * 10000
+      const values = series.flatMap((s) => [
+        ...s.day.hours.map((h) => h.usageKwh),
+        s.day.thresholdKwh ?? 0,
+      ])
+      const max = Math.ceil(Math.max(...values) / 10000) * 10000
       return {
         domain: [0, max] as [number, number],
         ticks: Array.from({ length: max / 10000 + 1 }, (_, i) => i * 10000),
       }
     }
     if (tab === 'temp') {
-      const temps = day.hours.map((h) => h.temperature)
-      const lo = Math.floor(Math.min(...temps) / 2) * 2
-      const hi = Math.ceil(Math.max(...temps) / 2) * 2
-      return { domain: [lo, hi] as [number, number], ticks: undefined }
+      const temps = series[0]?.day.hours.map((h) => h.temperature) ?? [20, 35]
+      return {
+        domain: [
+          Math.floor(Math.min(...temps) / 2) * 2,
+          Math.ceil(Math.max(...temps) / 2) * 2,
+        ] as [number, number],
+        ticks: undefined,
+      }
     }
-    const max = Math.ceil(Math.max(100, ...day.hours.map((h) => h.riskPercent)) / 20) * 20
+    const max =
+      Math.ceil(
+        Math.max(100, ...series.flatMap((s) => s.day.hours.map((h) => h.riskPercent))) /
+          20,
+      ) * 20
     return {
       domain: [0, max] as [number, number],
       ticks: Array.from({ length: max / 20 + 1 }, (_, i) => i * 20),
     }
-  })()
+  }, [series, tab])
 
   return (
     <div className="flex h-full min-w-0 flex-col">
@@ -99,29 +127,44 @@ export function ForecastChart({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 text-[13px] text-muted">
-          <span className="font-semibold text-ink">{districtName}</span>
-          {tab === 'demand' && (
-            <>
-              <Mark color={identityColor} /> 실측
-              <Mark color="var(--color-neutral-line)" dashed /> 평소 수준
-              <Mark color="var(--color-danger)" dashed /> 위험선
-            </>
+          {tab === 'temp' ? (
+            <span>서울 대표기상 (두 동 공통)</span>
+          ) : (
+            series.map((s) => (
+              <span key={s.code} className="flex items-center gap-1.5">
+                <span
+                  aria-hidden
+                  className="inline-block h-0.5 w-3 rounded-full"
+                  style={{ background: s.color }}
+                />
+                {s.name}
+              </span>
+            ))
           )}
-          {tab === 'error' && (
-            <>
-              <Mark color={identityColor} /> 위험선 대비
-              <Mark color="var(--color-danger)" dashed /> 100%
-            </>
+          {tab !== 'temp' && (
+            <span className="flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="inline-block h-0.5 w-3 rounded-full"
+                style={{
+                  background:
+                    'repeating-linear-gradient(90deg, var(--color-danger) 0 4px, transparent 4px 7px)',
+                }}
+              />
+              위험선
+            </span>
+          )}
+          {scenarioLabel && (
+            <span className="rounded-full bg-brand-light px-2 py-0.5 text-[13px] font-semibold text-brand-dark">
+              {scenarioLabel}
+            </span>
           )}
         </div>
       </div>
 
       <div className="mt-2 min-h-0 flex-1">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={day.hours}
-            margin={{ top: 18, right: 12, bottom: 0, left: 0 }}
-          >
+          <LineChart data={rows} margin={{ top: 18, right: 12, bottom: 0, left: 0 }}>
             <CartesianGrid stroke="var(--color-hair)" vertical={false} />
             <XAxis
               dataKey="hour"
@@ -145,26 +188,22 @@ export function ForecastChart({
               }
             />
 
-            {tab === 'demand' && (
-              <ReferenceLine
-                y={day.thresholdKwh}
-                stroke="var(--color-danger)"
-                strokeDasharray="5 4"
-                // 오른쪽에 두면 저녁 시간대 곡선과 겹친다. 새벽 쪽이 비어 있다.
-                label={{
-                  value: '위험선',
-                  position: 'insideTopLeft',
-                  fill: 'var(--color-danger-text)',
-                  fontSize: 12,
-                }}
-              />
-            )}
+            {/* 위험선. kWh 탭에서는 동마다 값이 달라 각각 그린다. */}
+            {tab === 'demand' &&
+              series.map(
+                (s) =>
+                  s.day.thresholdKwh != null && (
+                    <ReferenceLine
+                      key={s.code}
+                      y={s.day.thresholdKwh}
+                      stroke={s.color}
+                      strokeDasharray="5 4"
+                      strokeOpacity={0.7}
+                    />
+                  ),
+              )}
             {tab === 'error' && (
-              <ReferenceLine
-                y={100}
-                stroke="var(--color-danger)"
-                strokeDasharray="5 4"
-              />
+              <ReferenceLine y={100} stroke="var(--color-danger)" strokeDasharray="5 4" />
             )}
 
             <ReferenceLine
@@ -174,134 +213,110 @@ export function ForecastChart({
             />
             <Tooltip
               cursor={{ stroke: 'var(--color-faint)', strokeDasharray: '3 3' }}
-              content={<ForecastTooltip unit={unit} tab={tab} />}
+              content={<ChartTooltip series={series} tab={tab} />}
             />
 
-            {tab === 'demand' && (
+            {tab === 'temp' ? (
               <Line
                 type="monotone"
-                dataKey="baselineKwh"
+                dataKey="temperature"
                 stroke="var(--color-neutral-line)"
-                strokeWidth={1.5}
-                strokeDasharray="5 4"
+                strokeWidth={2}
                 dot={false}
                 isAnimationActive={false}
               />
+            ) : (
+              series.map((s) => (
+                <Line
+                  key={s.code}
+                  type="monotone"
+                  dataKey={`${s.code}_${tab === 'demand' ? 'usage' : 'risk'}`}
+                  stroke={s.color}
+                  strokeWidth={2}
+                  // 점 색은 서버 등급 색. 경계에서 위험으로 넘어가는 순간이 보인다.
+                  dot={<GradeDot code={s.code} />}
+                  activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }}
+                  connectNulls={false}
+                  isAnimationActive={false}
+                />
+              ))
             )}
-            <Line
-              type="monotone"
-              dataKey={
-                tab === 'demand'
-                  ? 'usageKwh'
-                  : tab === 'temp'
-                    ? 'temperature'
-                    : 'riskPercent'
-              }
-              stroke={identityColor}
-              strokeWidth={2}
-              // 점 색은 서버 등급 색. 경계에서 위험으로 넘어가는 순간이 보인다.
-              dot={<GradeDot />}
-              activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }}
-              isAnimationActive={false}
-            />
           </LineChart>
         </ResponsiveContainer>
       </div>
-
-      {missingNote && (
-        <p className="mt-1 text-[13px] text-faint">{missingNote}</p>
-      )}
     </div>
   )
 }
 
-function Mark({ color, dashed }: { color: string; dashed?: boolean }) {
-  return (
-    <span
-      aria-hidden
-      className="ml-1 inline-block h-0.5 w-3 rounded-full"
-      style={{
-        background: dashed
-          ? `repeating-linear-gradient(90deg, ${color} 0 4px, transparent 4px 7px)`
-          : color,
-      }}
-    />
-  )
-}
-
 function GradeDot(props: {
+  code: string
   cx?: number
   cy?: number
-  payload?: { color?: string }
+  payload?: Record<string, unknown>
 }) {
-  const { cx, cy, payload } = props
+  const { code, cx, cy, payload } = props
   if (cx == null || cy == null) return null
   return (
     <circle
       cx={cx}
       cy={cy}
       r={3.5}
-      fill={payload?.color ?? 'var(--color-faint)'}
+      fill={(payload?.[`${code}_color`] as string) ?? 'var(--color-faint)'}
       stroke="#fff"
       strokeWidth={1.5}
     />
   )
 }
 
-function ForecastTooltip({
+function ChartTooltip({
   active,
   payload,
   label,
-  unit,
+  series,
   tab,
 }: {
   active?: boolean
   payload?: { payload?: Record<string, unknown> }[]
   label?: number
-  unit: string
+  series: ChartSeries[]
   tab: ChartTab
 }) {
-  const p = payload?.[0]?.payload as
-    | {
-        usageKwh: number
-        baselineKwh: number
-        temperature: number
-        riskPercent: number
-        riskText: string
-        grade: string
-        color: string
-        message: string
-      }
-    | undefined
-  if (!active || !p) return null
-
-  const value =
-    tab === 'demand'
-      ? `${Math.round(p.usageKwh).toLocaleString()} ${unit}`
-      : tab === 'temp'
-        ? `${p.temperature.toFixed(1)}${unit}`
-        : `${p.riskPercent.toFixed(1)}${unit}`
+  const row = payload?.[0]?.payload
+  if (!active || !row) return null
 
   return (
     <div className="rounded-xl border border-[rgba(22,60,42,0.10)] bg-white/96 px-3 py-2 shadow-panel backdrop-blur-[14px]">
       <div className="tnum text-[13px] font-semibold text-ink">
         {String(label).padStart(2, '0')}:00
       </div>
-      <div className="tnum mt-1 text-[15px] font-semibold text-ink">{value}</div>
-      {tab === 'demand' && (
-        <div className="tnum text-[13px] text-muted">
-          평소 {Math.round(p.baselineKwh).toLocaleString()} kWh
+      {tab === 'temp' ? (
+        <div className="tnum mt-1 text-[15px] font-semibold text-ink">
+          {Number(row.temperature).toFixed(1)}°C
+        </div>
+      ) : (
+        <div className="mt-1 flex flex-col gap-1">
+          {series.map((s) => {
+            const value = row[`${s.code}_${tab === 'demand' ? 'usage' : 'risk'}`]
+            if (value == null) return null
+            return (
+              <div key={s.code} className="flex items-center gap-2 text-[13px]">
+                <span
+                  aria-hidden
+                  className="inline-block size-2 flex-none rounded-full"
+                  style={{ background: row[`${s.code}_color`] as string }}
+                />
+                <span className="text-muted">{s.name}</span>
+                <span className="tnum ml-auto font-semibold text-ink">
+                  {tab === 'demand'
+                    ? `${Math.round(Number(value)).toLocaleString()} kWh`
+                    : `${Number(value).toFixed(1)}%`}
+                </span>
+                <span className="text-faint">{row[`${s.code}_grade`] as string}</span>
+              </div>
+            )
+          })}
         </div>
       )}
-      <div className="mt-1.5 flex items-center gap-1.5 border-t border-hair pt-1.5 text-[13px]">
-        <span
-          aria-hidden
-          className="inline-block size-2 rounded-full"
-          style={{ background: p.color }}
-        />
-        <span className="font-semibold text-ink">{p.grade}</span>
-        <span className="text-muted">· {p.riskText}</span>
-      </div>
     </div>
   )
 }

@@ -46,13 +46,11 @@ export function ChartFocusView({
         <div className="min-h-0 flex-1">
           {chart.mode === 'forecast' ? (
             <ForecastChart
-              day={chart.day}
-              districtName={chart.districtName}
-              identityColor={chart.identityColor}
+              series={chart.series}
+              scenarioLabel={chart.scenarioLabel}
               hour={hour}
               tab={chartTab}
               onTabChange={onChartTabChange}
-              missingNote={chart.missingNote}
             />
           ) : (
             <DemandChart

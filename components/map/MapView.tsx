@@ -19,17 +19,28 @@ import {
 } from '@/lib/mock'
 import type { MapDistrict } from '@/components/views/shared'
 
-/** 로컬 경계에 서버가 준 스타일을 얹는다. 경계는 아직 서버에 없다. */
-function styled(districts: MapDistrict[]) {
+/**
+ * 경계는 서버 것을 우선하고, 없으면 앱에 포함된 경계로 떨어진다.
+ *
+ * 색은 시각별 위험 등급을 따른다. 서버 폴리곤의 fill_color 는 도시열 등급이라
+ * 하루 내내 고정인데, 이 화면은 시간과 토글에 따라 지도가 바뀌는 게 핵심이다.
+ * 두 색 모두 서버가 만든 값이고, 그 중 시각에 반응하는 쪽을 쓴다.
+ */
+function styled(
+  districts: MapDistrict[],
+  boundaries: GeoJSON.FeatureCollection | null,
+) {
+  const source = boundaries ?? DISTRICT_GEOJSON
   return {
     type: 'FeatureCollection' as const,
-    features: DISTRICT_GEOJSON.features.map((f) => {
-      const d = districts.find((x) => x.code === f.properties.code)
+    features: source.features.map((f) => {
+      const code = (f.properties as { code?: string } | null)?.code
+      const d = districts.find((x) => x.code === code)
       return {
-        ...f,
+        type: 'Feature' as const,
+        geometry: f.geometry,
         properties: {
-          code: f.properties.code,
-          name: f.properties.name,
+          code: code ?? '',
           fillColor: d?.fillColor ?? '#CCCCCC',
           fillOpacity: d?.fillOpacity ?? 0.3,
           strokeColor: d?.strokeColor ?? '#999999',
@@ -56,6 +67,8 @@ export interface MapController {
 interface MapViewProps {
   /** 폴리곤 채색과 마커 내용. 색은 서버 등급 색을 그대로 받는다. */
   districts: MapDistrict[]
+  /** 서버가 준 경계. 없으면 앱에 포함된 경계로 떨어진다. */
+  boundaries?: GeoJSON.FeatureCollection | null
   /** 뷰마다 패널이 가리는 영역이 달라 여백도 달라진다. */
   padding?: { top: number; bottom: number; left: number; right: number }
   showLabels?: boolean
@@ -88,6 +101,7 @@ const BLANK_STYLE = {
 
 export function MapView({
   districts,
+  boundaries = null,
   padding = MAP_PADDING,
   showLabels = true,
   onReady,
@@ -103,10 +117,12 @@ export function MapView({
   const paddingRef = useRef(padding)
   // 생성 effect가 최신 스타일을 읽도록 ref로 흘려보낸다.
   const districtsRef = useRef(districts)
+  const boundariesRef = useRef(boundaries)
   useEffect(() => {
     paddingRef.current = padding
     districtsRef.current = districts
-  }, [padding, districts])
+    boundariesRef.current = boundaries
+  }, [padding, districts, boundaries])
 
   // 지도 인스턴스는 한 번만 만든다. scenario는 아래 별도 effect에서 데이터만 갈아끼운다.
   useEffect(() => {
@@ -158,7 +174,10 @@ export function MapView({
         paint: { 'line-color': '#D2E0D1', 'line-width': 1 },
       })
 
-      map.addSource(SRC, { type: 'geojson', data: styled(districtsRef.current) })
+      map.addSource(SRC, {
+        type: 'geojson',
+        data: styled(districtsRef.current, boundariesRef.current),
+      })
       map.addLayer({
         id: 'district-fill',
         type: 'fill',
@@ -222,11 +241,11 @@ export function MapView({
     if (!map) return
     const apply = () => {
       const source = map.getSource<GeoJSONSource>(SRC)
-      source?.setData(styled(districts))
+      source?.setData(styled(districts, boundaries))
     }
     if (map.isStyleLoaded() && map.getSource(SRC)) apply()
     else map.once('idle', apply)
-  }, [districts])
+  }, [districts, boundaries])
 
   return (
     <>
