@@ -3,28 +3,22 @@
 import { useCallback, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Sidebar } from '@/components/layout/Sidebar'
-import { Panel } from '@/components/layout/Panel'
-import { HeaderCard } from '@/components/controls/HeaderCard'
-import { WeatherChips } from '@/components/controls/WeatherChips'
-import { MicroclimateToggle } from '@/components/controls/MicroclimateToggle'
-import { TimeScrubber } from '@/components/controls/TimeScrubber'
-import { DemandChart } from '@/components/panels/DemandChart'
-import { DistrictCard } from '@/components/panels/DistrictCard'
-import { ModelPerfCard } from '@/components/panels/ModelPerfCard'
-import {
-  BriefingCard,
-  type BriefingState,
-} from '@/components/panels/BriefingCard'
-import { ZoomControls } from '@/components/map/ZoomControls'
-import { MiniMap } from '@/components/map/MiniMap'
+import type { BriefingState } from '@/components/panels/BriefingCard'
 import type { MapController, Viewport } from '@/components/map/MapView'
+import { ComparisonView } from '@/components/views/ComparisonView'
+import { MapFocusView } from '@/components/views/MapFocusView'
+import { ChartFocusView } from '@/components/views/ChartFocusView'
+import { DataInfoView } from '@/components/views/DataInfoView'
+import { SettingsView } from '@/components/views/SettingsView'
+import type { ViewProps } from '@/components/views/shared'
+import { BRIEFINGS, CURRENT_HOUR } from '@/lib/mock'
 import {
-  BRIEFINGS,
-  CURRENT_HOUR,
-  DISTRICTS,
-  OVERALL_MAPE,
-  getForecast,
-} from '@/lib/mock'
+  DEFAULT_SETTINGS,
+  VIEW_MAP_PADDING,
+  type ChartTab,
+  type Settings,
+  type ViewKey,
+} from '@/lib/nav'
 import type { ScenarioKey } from '@/lib/types'
 
 // MapLibre는 window/WebGL을 요구해 서버에서 렌더할 수 없다.
@@ -33,19 +27,27 @@ const MapView = dynamic(
   { ssr: false },
 )
 
+const VIEWS: Record<ViewKey, (props: ViewProps) => React.ReactNode> = {
+  comparison: ComparisonView,
+  map: MapFocusView,
+  chart: ChartFocusView,
+  data: () => <DataInfoView />,
+  settings: SettingsView,
+}
+
 export default function Page() {
+  // 화면 전체가 공유하는 상태는 여기 한 곳에만 둔다.
+  const [view, setView] = useState<ViewKey>('comparison')
   const [scenario, setScenario] = useState<ScenarioKey>('c')
   const [hour, setHour] = useState(CURRENT_HOUR)
   const [playing, setPlaying] = useState(false)
+  const [chartTab, setChartTab] = useState<ChartTab>('demand')
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [viewport, setViewport] = useState<Viewport | null>(null)
   const mapRef = useRef<MapController | null>(null)
 
-  const handleMapReady = useCallback((controller: MapController) => {
-    mapRef.current = controller
-  }, [])
-
-  // Phase 3 검수용 — 백엔드 연동 시 실제 fetch 상태로 대체된다.
+  // 브리핑 3상태 검수용 — 백엔드 연동 시 실제 fetch 상태로 대체된다.
   const [briefingStatus, setBriefingStatus] =
     useState<BriefingState['status']>('success')
   const briefingState: BriefingState =
@@ -55,12 +57,43 @@ export default function Page() {
         ? { status: 'error' }
         : { status: 'loading' }
 
+  const handleMapReady = useCallback((controller: MapController) => {
+    mapRef.current = controller
+  }, [])
+
+  // 재생 중에 다른 화면으로 넘어가면 시간이 혼자 흐른다. 화면을 옮기면 멈춘다.
+  const handleViewChange = useCallback((next: ViewKey) => {
+    setView(next)
+    setPlaying(false)
+  }, [])
+
+  const ActiveView = VIEWS[view]
+  const viewProps: ViewProps = {
+    scenario,
+    onScenarioChange: setScenario,
+    hour,
+    onHourChange: setHour,
+    playing,
+    onPlayingChange: setPlaying,
+    chartTab,
+    onChartTabChange: setChartTab,
+    settings,
+    onSettingsChange: setSettings,
+    briefingState,
+    onBriefingRetry: () => setBriefingStatus('success'),
+    mapRef,
+    viewport,
+  }
+
   return (
     <div className="relative size-full">
-      {/* 지도는 화면을 꽉 채우는 배경 */}
+      {/* 지도는 화면을 꽉 채우는 배경이며 뷰가 바뀌어도 마운트를 유지한다.
+          다시 만들면 전환할 때마다 깜빡이고 초기화 비용이 든다. */}
       <div className="absolute inset-0 bg-mapbase">
         <MapView
           scenario={scenario}
+          padding={VIEW_MAP_PADDING[view]}
+          showLabels={settings.showMapLabels}
           onReady={handleMapReady}
           onViewChange={setViewport}
         />
@@ -71,77 +104,13 @@ export default function Page() {
         <Sidebar
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((v) => !v)}
+          activeView={view}
+          onViewChange={handleViewChange}
         />
-
-        {/* 중앙 컬럼 — min-w-0 이 없으면 자식이 넘칠 때 레일을 밀어낸다 */}
-        <div className="flex min-w-0 flex-1 flex-col gap-5">
-          <div className="flex flex-wrap items-start gap-5">
-            <HeaderCard hour={hour} />
-            <WeatherChips hour={hour} />
-            <MicroclimateToggle scenario={scenario} onChange={setScenario} />
-          </div>
-
-          <div className="flex-1" />
-
-          <div className="flex min-w-0 gap-5">
-            {/* 1280px 미만에서는 미니맵을 숨긴다 */}
-            <MiniMap
-              viewport={viewport}
-              className="hidden w-[240px] flex-none self-end xl:block"
-            />
-            {/* 차트는 218px면 그림 영역이 60px밖에 안 남아 두 동의 기울기 차이가
-                묻힌다. 이 데모의 핵심이므로 미니맵보다 높게 잡는다. */}
-            <Panel className="flex h-[288px] min-w-0 flex-1 flex-col px-5 pb-3 pt-4">
-              <div className="min-h-0 flex-1">
-                <DemandChart scenario={scenario} hour={hour} />
-              </div>
-              <TimeScrubber
-                hour={hour}
-                onHourChange={setHour}
-                playing={playing}
-                onPlayingChange={setPlaying}
-              />
-            </Panel>
-          </div>
-        </div>
-
-        {/* 우측 레일 400px 고정 */}
-        {/* 레일 자식은 절대 눌리지 않는다 — 눌리면 accent 패널의 overflow-hidden에
-            걸려 카드 하단 지표가 소리 없이 잘린다. 넘치면 스크롤로 처리한다. */}
-        <aside className="flex w-[400px] flex-none flex-col gap-5 overflow-y-auto">
-          {DISTRICTS.map((district) => {
-            const forecast = getForecast(district.code, scenario)
-            const point = forecast.hourly[hour]
-            return (
-              <DistrictCard
-                key={district.code}
-                district={district}
-                forecast={forecast}
-                demand={scenario === 'c' ? point.modelC : point.modelB}
-                className="shrink-0"
-              />
-            )
-          })}
-
-          <BriefingCard
-            state={briefingState}
-            onRetry={() => setBriefingStatus('success')}
-            className="shrink-0"
-          />
-
-          <ModelPerfCard mape={OVERALL_MAPE} className="shrink-0" />
-
-          <div className="min-h-5 flex-1" />
-
-          <ZoomControls
-            onZoomIn={() => mapRef.current?.zoomIn()}
-            onZoomOut={() => mapRef.current?.zoomOut()}
-            onReset={() => mapRef.current?.reset()}
-          />
-        </aside>
+        <ActiveView {...viewProps} />
       </div>
 
-      {/* 브리핑 3상태 검수용 — Phase 8(백엔드 연동)에서 제거된다 */}
+      {/* 브리핑 3상태 검수용 — 백엔드 연동 시 제거된다 */}
       <button
         type="button"
         onClick={() =>

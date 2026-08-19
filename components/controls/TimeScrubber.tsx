@@ -9,10 +9,9 @@ interface TimeScrubberProps {
   playing: boolean
   onPlayingChange: (playing: boolean) => void
   source?: string
+  /** 한 시간당 머무는 시간(ms) */
+  stepMs?: number
 }
-
-/** 재생 시 한 시간당 머무는 시간(ms). 24시간을 약 15초에 훑는다. */
-const STEP_MS = 620
 
 export function TimeScrubber({
   hour,
@@ -20,14 +19,15 @@ export function TimeScrubber({
   playing,
   onPlayingChange,
   source = '서울 열린데이터광장 · S-DoT',
+  stepMs = 620,
 }: TimeScrubberProps) {
   useEffect(() => {
     if (!playing) return
     const id = setInterval(() => {
       onHourChange((hour + 1) % 24)
-    }, STEP_MS)
+    }, stepMs)
     return () => clearInterval(id)
-  }, [playing, hour, onHourChange])
+  }, [playing, hour, onHourChange, stepMs])
 
   return (
     <div className="flex items-center gap-3 border-t border-hair pt-3">
