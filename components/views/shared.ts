@@ -40,11 +40,9 @@ export type ChartModel =
   | { mode: 'mock' }
   | {
       mode: 'forecast'
-      day: import('@/lib/api/adapt').DayView
-      districtName: string
-      identityColor: string
-      /** 비교 대상 동의 시계열이 없을 때의 안내 */
-      missingNote: string | null
+      series: import('@/components/panels/ForecastChart').ChartSeries[]
+      /** '기상만' · '미기후 반영' — 지금 보고 있는 예측이 무엇인지 */
+      scenarioLabel: string
     }
 
 /**
@@ -90,6 +88,8 @@ export interface ViewProps {
   cards: CardModel[]
   chart: ChartModel
   mapDistricts: MapDistrict[]
+  /** 서버가 준 경계. 없으면 앱 내장 경계로 떨어진다. */
+  boundaries: GeoJSON.FeatureCollection | null
   header: HeaderModel
   /** 시나리오가 준비되지 않으면 토글을 잠근다 */
   scenarioNote: string | null

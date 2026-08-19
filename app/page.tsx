@@ -42,6 +42,7 @@ import {
   type ViewKey,
 } from '@/lib/nav'
 import type { ScenarioKey } from '@/lib/types'
+import type { ScenarioName } from '@/lib/api/types'
 
 // MapLibre는 window/WebGL을 요구해 서버에서 렌더할 수 없다.
 const MapView = dynamic(
@@ -69,8 +70,11 @@ export default function Page() {
   const [viewport, setViewport] = useState<Viewport | null>(null)
   const mapRef = useRef<MapController | null>(null)
 
-  const dashboard = useDashboard()
+  // 토글은 'b'(기상만) / 'c'(미기후). 서버 시나리오 이름으로 옮겨 요청한다.
+  const apiScenario: ScenarioName = scenario === 'b' ? 'weather' : 'microclimate'
+  const dashboard = useDashboard(apiScenario)
   const briefing = useBriefing()
+  const scenarioLabel = scenario === 'b' ? '기상만' : '미기후 반영'
 
   // 서버 등급 문자열을 화면 스타일용 3단계로 접는다.
   // 색과 문구는 서버 값을 그대로 쓰고, 여기서는 강조 수준만 정한다.
@@ -128,8 +132,8 @@ export default function Page() {
             ? `+${d.demand.extraPercent.toFixed(1)}%`
             : '—',
         headlineLabel: point ? '위험선 대비' : '평소 대비 추가 사용',
-        // 시계열이 없으면 위험 등급이 없다. 도시열 등급을 대신 보여주되
-        // 무엇의 등급인지 밝힌다 — '매우 높음'만 있으면 위험도로 읽힌다.
+        // 시계열이 없을 때만 도시열 등급으로 대체하고, 무엇의 등급인지 밝힌다.
+        // '매우 높음'만 있으면 위험도로 읽힌다.
         grade: point ? point.grade : `도시열 ${d.heat.grade}`,
         gradeColor: point ? point.color : d.heat.color,
         // 패널 강조는 위험 등급에만 건다. 도시열이 높다고 지금 위험한 건 아니다.
@@ -164,32 +168,21 @@ export default function Page() {
     })
   }, [dashboard, scenario, hour])
 
-  /**
-   * 두 동이 모두 준비됐을 때만 비교 차트를 그린다는 계약(8항)을 따른다.
-   * 한쪽만 선으로 그리면 없는 쪽이 0인 것처럼 읽힌다.
-   * 대신 준비된 동의 실측 곡선을 단독으로 보여준다 — 위험선을 넘는 순간이
-   * 이 화면의 핵심이라 빈 화면으로 두지 않는다.
-   */
+  /** 두 동을 함께 그린다. 시계열이 있는 동만 시리즈에 넣는다. */
   const chart: ChartModel = useMemo(() => {
     if (dashboard.status !== 'ready') return { mode: 'mock' }
-    const { districts, days, meta } = dashboard.data
-    const withDay = districts.find((d) => days[d.code])
-    if (!withDay) return { mode: 'mock' }
-
-    const missing = districts
-      .filter((d) => !days[d.code])
-      .map((d) => meta.dongs.find((x) => x.code === d.code))
-      .filter(Boolean)
-    return {
-      mode: 'forecast',
-      day: days[withDay.code],
-      districtName: withDay.name,
-      identityColor: withDay.identityColor,
-      missingNote: missing.length
-        ? `${missing.map((m) => m!.name).join(' · ')}: ${missing[0]!.forecast_note ?? '시계열 없음'}`
-        : null,
-    }
-  }, [dashboard])
+    const { districts, days } = dashboard.data
+    const series = districts
+      .filter((d) => days[d.code])
+      .map((d) => ({
+        code: d.code,
+        name: d.name,
+        color: d.identityColor,
+        day: days[d.code],
+      }))
+    if (series.length === 0) return { mode: 'mock' }
+    return { mode: 'forecast', series, scenarioLabel }
+  }, [dashboard, scenarioLabel])
 
   /** 지도 채색. 서버 등급 색을 그대로 쓰고, 없으면 지역색으로 떨어진다. */
   const mapDistricts: MapDistrict[] = useMemo(() => {
@@ -306,14 +299,15 @@ export default function Page() {
     }
   }, [dashboard, hour])
 
-  // 기상만·미기후 예측이 아직 없으면 토글을 잠근다.
-  const scenarioNote =
-    dashboard.status === 'ready'
-      ? (dashboard.data.meta.forecast_scenarios?.microclimate?.status ===
-        'pending'
-          ? dashboard.data.meta.forecast_scenarios.microclimate.note
-          : null)
-      : null
+  // 두 시나리오가 모두 준비돼야 토글이 의미를 가진다. 하나라도 없으면 잠근다.
+  const scenarioNote = useMemo(() => {
+    if (dashboard.status !== 'ready') return null
+    const s = dashboard.data.meta.forecast_scenarios
+    const blocked = (['weather', 'microclimate'] as const).find(
+      (k) => s?.[k]?.status !== 'ready',
+    )
+    return blocked ? (s[blocked].note ?? '예측이 아직 준비되지 않았습니다') : null
+  }, [dashboard])
 
   // API가 붙어 있으면 서버 브리핑, 아니면 목데이터로 화면을 유지한다.
   const briefingState: BriefingState = !isApiEnabled()
@@ -371,6 +365,10 @@ export default function Page() {
     cards,
     chart,
     mapDistricts,
+    boundaries:
+      dashboard.status === 'ready'
+        ? (dashboard.data.geojson as GeoJSON.FeatureCollection | null)
+        : null,
     header,
     scenarioNote,
     mapRef,
@@ -384,6 +382,11 @@ export default function Page() {
       <div className="absolute inset-0 bg-mapbase">
         <MapView
           districts={mapDistricts}
+          boundaries={
+            dashboard.status === 'ready'
+              ? (dashboard.data.geojson as GeoJSON.FeatureCollection | null)
+              : null
+          }
           padding={VIEW_MAP_PADDING[view]}
           showLabels={settings.showMapLabels}
           onReady={handleMapReady}

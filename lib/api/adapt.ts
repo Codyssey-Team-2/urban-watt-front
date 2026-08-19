@@ -3,6 +3,8 @@ import type {
   DongSummary,
   ForecastResponse,
   Microclimate,
+  ModelBasis,
+  ScenarioName,
 } from './types'
 
 /**
@@ -89,7 +91,8 @@ export interface DayView {
   code: string
   name: string
   date: string
-  thresholdKwh: number
+  scenario: ScenarioName
+  thresholdKwh: number | null
   weather: {
     tMax: number | null
     tMin: number | null
@@ -99,6 +102,8 @@ export interface DayView {
     heatwave: boolean
   }
   hours: HourView[]
+  /** 예측 모델의 학습 근거. 실측에는 없다. */
+  modelBasis: ModelBasis | null
 }
 
 const cover = (c: Microclimate['components'][keyof Microclimate['components']]) => ({
@@ -162,14 +167,16 @@ export function adaptForecast(dto: ForecastResponse): DayView {
     code: dto.code,
     name: dto.name,
     date: dto.date,
+    scenario: dto.scenario,
     thresholdKwh: dto.threshold_kwh,
     weather: {
-      tMax: dto.weather.t_max,
-      tMin: dto.weather.t_min,
-      humidity: dto.weather.humidity,
-      wind: dto.weather.wind,
-      heatwave: dto.weather.heatwave,
+      tMax: dto.weather?.t_max ?? null,
+      tMin: dto.weather?.t_min ?? null,
+      humidity: dto.weather?.humidity ?? null,
+      wind: dto.weather?.wind ?? null,
+      heatwave: dto.weather?.heatwave ?? false,
     },
+    modelBasis: dto.model_basis,
     hours: dto.points
       .map((p) => ({
         hour: p.hour,
