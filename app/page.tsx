@@ -92,6 +92,7 @@ export default function Page() {
       <div className="absolute inset-0 bg-mapbase">
         <MapView
           scenario={scenario}
+          hour={hour}
           padding={VIEW_MAP_PADDING[view]}
           showLabels={settings.showMapLabels}
           onReady={handleMapReady}
@@ -99,8 +100,10 @@ export default function Page() {
         />
       </div>
 
-      {/* 패널은 지도 위에 떠 있다. 폭이 줄면 겹치므로 절대위치가 아니라 flex로 짠다. */}
-      <div className="absolute inset-0 flex gap-5 p-6">
+      {/* 패널은 지도 위에 떠 있다. 폭이 줄면 겹치므로 절대위치가 아니라 flex로 짠다.
+          오버레이 자체는 화면 전체를 덮으므로 이벤트를 통과시켜야 지도를 끌 수 있다.
+          실제로 이벤트를 받아야 하는 건 Panel(pointer-events-auto)뿐이다. */}
+      <div className="pointer-events-none absolute inset-0 flex gap-5 p-6">
         <Sidebar
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((v) => !v)}
@@ -127,7 +130,7 @@ export default function Page() {
           )
         }
         // 하단 우측에 두면 화면이 낮을 때 줌 컨트롤을 덮는다. 상단 여백 띠로 뺀다.
-        className="tnum absolute right-6 top-0.5 rounded-full bg-ink/70 px-3 py-0.5 text-[13px] text-white"
+className="tnum pointer-events-auto absolute right-6 top-0.5 rounded-full bg-ink/70 px-3 py-0.5 text-[13px] text-white"
       >
         브리핑 상태={briefingStatus}
       </button>

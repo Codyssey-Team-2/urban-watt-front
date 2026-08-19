@@ -11,7 +11,13 @@ import { ModelPerfCard } from '@/components/panels/ModelPerfCard'
 import { BriefingCard } from '@/components/panels/BriefingCard'
 import { ZoomControls } from '@/components/map/ZoomControls'
 import { MiniMap } from '@/components/map/MiniMap'
-import { DISTRICTS, OVERALL_MAPE, getForecast } from '@/lib/mock'
+import {
+  DISTRICTS,
+  OVERALL_MAPE,
+  getDemandAt,
+  getExcessAt,
+  getRiskLevel,
+} from '@/lib/mock'
 import { PLAYBACK_SPEED } from '@/lib/nav'
 import type { ViewProps } from './shared'
 
@@ -87,14 +93,14 @@ export function ComparisonView(props: ViewProps) {
         */}
         <div className="contents lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:gap-5 lg:overflow-y-auto short:lg:gap-3">
         {DISTRICTS.map((district) => {
-          const forecast = getForecast(district.code, scenario)
-          const point = forecast.hourly[hour]
+          const excess = getExcessAt(district.code, scenario, hour)
           return (
             <DistrictCard
               key={district.code}
               district={district}
-              forecast={forecast}
-              demand={scenario === 'c' ? point.modelC : point.modelB}
+              excess={excess}
+              risk={getRiskLevel(excess)}
+              demand={getDemandAt(district.code, scenario, hour)}
               className="w-[320px] shrink-0 lg:w-auto"
             />
           )

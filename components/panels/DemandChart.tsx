@@ -176,6 +176,9 @@ export function DemandChart({
             <CartesianGrid stroke="var(--color-hair)" vertical={false} />
             <XAxis
               dataKey="hour"
+              // 재생 중 현재 시각선이 정시 사이에도 놓이려면 수치 축이어야 한다.
+              type="number"
+              domain={[0, 23]}
               ticks={[0, 6, 12, 18, 23]}
               tickFormatter={(h: number) => String(h).padStart(2, '0')}
               tick={{ fill: 'var(--color-faint)', fontSize: 12 }}
@@ -205,7 +208,11 @@ export function DemandChart({
                 fontSize: 12,
               }}
             />
-            <ReferenceLine x={hour} stroke="var(--color-brand)" strokeWidth={1.5} />
+            <ReferenceLine
+              x={Math.min(hour, 23)}
+              stroke="var(--color-brand)"
+              strokeWidth={1.5}
+            />
             <Tooltip
               cursor={{ stroke: 'var(--color-faint)', strokeDasharray: '3 3' }}
               content={<ChartTooltip series={active} unit={unit} />}

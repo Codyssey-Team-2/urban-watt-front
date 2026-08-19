@@ -8,7 +8,14 @@ import { TimeScrubber } from '@/components/controls/TimeScrubber'
 import { DemandChart } from '@/components/panels/DemandChart'
 import { ModelPerfCard } from '@/components/panels/ModelPerfCard'
 import { cn } from '@/lib/cn'
-import { GURO_CODE, DISTRICTS, OVERALL_MAPE, getForecast } from '@/lib/mock'
+import {
+  DISTRICTS,
+  GURO_CODE,
+  OVERALL_MAPE,
+  getDemandAt,
+  getExcessAt,
+  getTempAt,
+} from '@/lib/mock'
 import { PLAYBACK_SPEED } from '@/lib/nav'
 import type { ViewProps } from './shared'
 
@@ -24,7 +31,7 @@ export function ChartFocusView({
   onChartTabChange,
   settings,
 }: ViewProps) {
-  const guro = getForecast(GURO_CODE, scenario).hourly[hour]
+  const guroTemp = getTempAt(GURO_CODE, hour)
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-5">
@@ -55,10 +62,10 @@ export function ChartFocusView({
 
       <div className="flex flex-wrap items-start gap-5">
         {DISTRICTS.map((district) => {
-          const forecast = getForecast(district.code, scenario)
-          const point = forecast.hourly[hour]
+          const excess = getExcessAt(district.code, scenario, hour)
+          const temp = getTempAt(district.code, hour)
+          const value = getDemandAt(district.code, scenario, hour)
           const warm = district.variant === 'warm'
-          const value = scenario === 'c' ? point.modelC : point.modelB
           return (
             <Panel
               key={district.code}
@@ -83,19 +90,19 @@ export function ChartFocusView({
                 <div className="border-l border-hair pl-6">
                   <div className="text-[13px] text-faint">평시 대비</div>
                   <div className="tnum text-[15px] font-semibold">
-                    +{forecast.excessRate}%
+                    +{Math.round(excess)}%
                   </div>
                 </div>
                 <div>
                   <div className="text-[13px] text-faint">S-DoT 실측</div>
                   <div className="tnum text-[15px] font-semibold">
-                    {point.sdot.toFixed(1)}°C
+                    {temp.sdot.toFixed(1)}°C
                   </div>
                 </div>
                 <div>
                   <div className="text-[13px] text-faint">대표기상</div>
                   <div className="tnum text-[15px] text-muted">
-                    {point.asos.toFixed(1)}°C
+                    {temp.asos.toFixed(1)}°C
                   </div>
                 </div>
               </div>
@@ -107,8 +114,8 @@ export function ChartFocusView({
       </div>
 
       <div className="text-[13px] text-faint">
-        {String(hour).padStart(2, '0')}시 기준 · 구로동 S-DoT 실측은 대표기상보다{' '}
-        {(guro.sdot - guro.asos).toFixed(1)}°C 높습니다.
+        {String(Math.floor(hour)).padStart(2, '0')}시 기준 · 구로동 S-DoT 실측은 대표기상보다{' '}
+        {(guroTemp.sdot - guroTemp.asos).toFixed(1)}°C 높습니다.
       </div>
     </div>
   )

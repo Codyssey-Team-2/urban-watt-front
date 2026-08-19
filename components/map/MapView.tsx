@@ -16,7 +16,7 @@ import {
   SEOUL_MUNICIPALITIES,
   SEOUL_OUTLINE,
   districtFeatures,
-  getForecast,
+  getExcessAt,
 } from '@/lib/mock'
 import type { ScenarioKey } from '@/lib/types'
 
@@ -35,6 +35,8 @@ export interface MapController {
 
 interface MapViewProps {
   scenario: ScenarioKey
+  /** 선택 시각. 폴리곤 채색이 시각별 초과율을 따라간다. */
+  hour: number
   /** 뷰마다 패널이 가리는 영역이 달라 여백도 달라진다. */
   padding?: { top: number; bottom: number; left: number; right: number }
   showLabels?: boolean
@@ -67,6 +69,7 @@ const BLANK_STYLE = {
 
 export function MapView({
   scenario,
+  hour,
   padding = MAP_PADDING,
   showLabels = true,
   onReady,
@@ -134,7 +137,10 @@ export function MapView({
         paint: { 'line-color': '#D2E0D1', 'line-width': 1 },
       })
 
-      map.addSource(SRC, { type: 'geojson', data: districtFeatures(scenario) })
+      map.addSource(SRC, {
+        type: 'geojson',
+        data: districtFeatures(scenario, hour),
+      })
       map.addLayer({
         id: 'district-fill',
         type: 'fill',
@@ -222,17 +228,18 @@ export function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 토글이 바뀌면 지도 색이 즉시 따라간다 — 데모의 핵심 전환.
+  // 토글과 시각이 바뀌면 지도 색이 즉시 따라간다.
+  // 지도를 다시 만들지 않고 소스 데이터만 갈아끼운다.
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
     const apply = () => {
       const source = map.getSource<GeoJSONSource>(SRC)
-      source?.setData(districtFeatures(scenario))
+      source?.setData(districtFeatures(scenario, hour))
     }
     if (map.isStyleLoaded() && map.getSource(SRC)) apply()
     else map.once('idle', apply)
-  }, [scenario])
+  }, [scenario, hour])
 
   return (
     <>
@@ -240,7 +247,9 @@ export function MapView({
           position:relative가 absolute를 덮어써서 inset-0이 높이를 만들지 못한다.
           위치가 아니라 크기로 채운다. */}
       <div ref={containerRef} className="size-full" />
-      {showLabels && <MapLabels scenario={scenario} map={readyMap} />}
+      {showLabels && (
+        <MapLabels scenario={scenario} hour={hour} map={readyMap} />
+      )}
     </>
   )
 }
@@ -251,41 +260,53 @@ export function MapView({
  */
 function MapLabels({
   scenario,
+  hour,
   map,
 }: {
   scenario: ScenarioKey
+  hour: number
   map: MapLibreMap | null
 }) {
-  const markersRef = useRef<Marker[]>([])
+  const markersRef = useRef<{ marker: Marker; value: HTMLElement }[]>([])
 
+  // 마커는 지도당 한 번만 만든다. 재생 중 매 시각마다 DOM을 새로 만들면
+  // 지도 위에서 라벨이 깜빡인다.
   useEffect(() => {
     if (!map) return
 
     markersRef.current = DISTRICTS.map((district) => {
-      const forecast = getForecast(district.code, scenario)
       const warm = district.variant === 'warm'
 
       const el = document.createElement('div')
       el.className = 'flex flex-col items-center gap-1'
       el.innerHTML = `
-          <div class="rounded-full border border-[rgba(22,60,42,0.10)] bg-white/96 px-3 py-1.5 shadow-panel backdrop-blur-[14px]">
-            <div class="flex items-center gap-2 whitespace-nowrap">
-              <span class="text-[15px] font-semibold ${warm ? 'text-warm-deep' : 'text-cool-deep'}">${district.name}</span>
-              <span class="tnum text-[15px] font-semibold ${warm ? 'text-warm-text' : 'text-cool'}">+${forecast.excessRate}%</span>
-            </div>
+        <div class="rounded-full border border-[rgba(22,60,42,0.10)] bg-white/96 px-3 py-1.5 shadow-panel backdrop-blur-[14px]">
+          <div class="flex items-center gap-2 whitespace-nowrap">
+            <span class="text-[15px] font-semibold ${warm ? 'text-warm-deep' : 'text-cool-deep'}">${district.name}</span>
+            <span data-value class="tnum text-[15px] font-semibold ${warm ? 'text-warm-text' : 'text-cool'}"></span>
           </div>
-          <div class="size-2.5 rotate-45 rounded-[2px] border-2 border-white" style="background:${warm ? '#D2543A' : '#2E9E6B'}"></div>
-        `
-      return new Marker({ element: el, anchor: 'bottom' })
+        </div>
+        <div class="size-2.5 rotate-45 rounded-[2px] border-2 border-white" style="background:${warm ? '#D2543A' : '#2E9E6B'}"></div>
+      `
+      const marker = new Marker({ element: el, anchor: 'bottom' })
         .setLngLat(district.center)
         .addTo(map)
+      return { marker, value: el.querySelector('[data-value]') as HTMLElement }
     })
 
     return () => {
-      markersRef.current.forEach((m) => m.remove())
+      markersRef.current.forEach(({ marker }) => marker.remove())
       markersRef.current = []
     }
-  }, [scenario, map])
+  }, [map])
+
+  // 수치만 갱신한다.
+  useEffect(() => {
+    markersRef.current.forEach(({ value }, i) => {
+      const excess = getExcessAt(DISTRICTS[i].code, scenario, hour)
+      value.textContent = `+${Math.round(excess)}%`
+    })
+  }, [scenario, hour, map])
 
   return null
 }
