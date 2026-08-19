@@ -43,12 +43,13 @@ export function ComparisonView(props: ViewProps) {
       <div className="flex min-w-0 flex-1 flex-col gap-5">
         <div className="flex flex-wrap items-start gap-5">
           <HeaderCard hour={hour} header={header} />
-          <WeatherChips chips={header.chips} />
+          {/* 토글이 이 화면의 핵심이라 칩보다 앞에 둔다. 칩이 늘어도 밀리지 않는다. */}
           <MicroclimateToggle
             scenario={scenario}
             onChange={onScenarioChange}
             disabledNote={scenarioNote}
           />
+          <WeatherChips chips={header.chips} />
         </div>
 
         <div className="flex-1" />

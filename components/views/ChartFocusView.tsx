@@ -34,12 +34,12 @@ export function ChartFocusView({
     <div className="flex min-w-0 flex-1 flex-col gap-5">
       <div className="flex flex-wrap items-start gap-5">
         <HeaderCard hour={hour} header={header} />
-        <WeatherChips chips={header.chips} />
         <MicroclimateToggle
           scenario={scenario}
           onChange={onScenarioChange}
           disabledNote={scenarioNote}
         />
+        <WeatherChips chips={header.chips} />
       </div>
 
       <Panel className="flex min-h-0 flex-1 flex-col px-6 pb-4 pt-5">

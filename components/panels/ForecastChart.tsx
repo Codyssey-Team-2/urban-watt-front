@@ -147,8 +147,11 @@ export function ForecastChart({
                 aria-hidden
                 className="inline-block h-0.5 w-3 rounded-full"
                 style={{
+                  // 전력수요 탭의 위험선은 동별 색이라 범례도 같은 색을 쓴다.
                   background:
-                    'repeating-linear-gradient(90deg, var(--color-danger) 0 4px, transparent 4px 7px)',
+                    tab === 'demand'
+                      ? `repeating-linear-gradient(90deg, ${series[0]?.color ?? 'var(--color-danger)'} 0 4px, transparent 4px 7px)`
+                      : 'repeating-linear-gradient(90deg, var(--color-danger) 0 4px, transparent 4px 7px)',
                 }}
               />
               위험선

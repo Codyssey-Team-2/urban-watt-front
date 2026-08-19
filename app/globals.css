@@ -78,6 +78,16 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+/* 마우스로 누른 뒤에도 파란 링이 남으면 UI가 지저분해진다.
+   키보드로 이동할 때만 보이도록 하고, 색도 브랜드 톤으로 맞춘다. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
 /* 숫자는 전 화면에서 등폭 + 자리수 고정. 자리수가 흔들리면 신뢰감이 깨진다. */
 .tnum {
   font-family: var(--font-mono), ui-monospace, monospace;
