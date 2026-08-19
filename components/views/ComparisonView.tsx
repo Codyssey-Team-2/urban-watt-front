@@ -7,13 +7,11 @@ import { MicroclimateToggle } from '@/components/controls/MicroclimateToggle'
 import { TimeScrubber } from '@/components/controls/TimeScrubber'
 import { DemandChart } from '@/components/panels/DemandChart'
 import { DistrictCard } from '@/components/panels/DistrictCard'
-import { ModelPerfCard } from '@/components/panels/ModelPerfCard'
 import { BriefingCard } from '@/components/panels/BriefingCard'
 import { ZoomControls } from '@/components/map/ZoomControls'
 import { MiniMap } from '@/components/map/MiniMap'
 import {
   DISTRICTS,
-  OVERALL_MAPE,
   getDemandAt,
   getExcessAt,
   getRiskLevel,
@@ -112,10 +110,6 @@ export function ComparisonView(props: ViewProps) {
           className="w-[360px] shrink-0 lg:w-auto"
         />
 
-        <ModelPerfCard
-          mape={OVERALL_MAPE}
-          className="w-[400px] shrink-0 lg:w-auto"
-        />
 
         </div>
 

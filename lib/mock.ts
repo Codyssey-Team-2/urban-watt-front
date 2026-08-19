@@ -7,7 +7,6 @@ import type {
   District,
   Forecast,
   HourlyPoint,
-  Metrics,
   ScenarioKey,
   WeatherSnapshot,
 } from './types'
@@ -247,29 +246,6 @@ export function getForecast(code: string, scenario: ScenarioKey): Forecast {
 
 export const getForecasts = (scenario: ScenarioKey): Forecast[] =>
   DISTRICTS.map((d) => getForecast(d.code, scenario))
-
-// ── 모델 성능 ───────────────────────────────────────────────────────────
-//
-// A = 달력/부하 패턴만, B = + 서울 대표 기상(ASOS), C = + 미기후(S-DoT)·도시공간
-
-export const METRICS: Metrics[] = [
-  {
-    districtCode: JINGWAN_CODE,
-    mape: { a: 12.4, b: 8.9, c: 7.8 },
-    rmse: { a: 4.1, b: 2.9, c: 2.6 },
-  },
-  {
-    districtCode: GURO_CODE,
-    mape: { a: 17.2, b: 11.7, c: 6.4 },
-    rmse: { a: 8.3, b: 5.6, c: 3.1 },
-  },
-]
-
-/** 두 동 종합 — 우측 레일 모델 성능 카드가 쓰는 값 */
-export const OVERALL_MAPE = { a: 14.8, b: 10.3, c: 7.1 }
-
-export const getMetrics = (code: string): Metrics =>
-  METRICS.find((m) => m.districtCode === code) ?? METRICS[0]
 
 // ── AI 브리핑 ───────────────────────────────────────────────────────────
 
