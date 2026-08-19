@@ -6,6 +6,7 @@ import { WeatherChips } from '@/components/controls/WeatherChips'
 import { MicroclimateToggle } from '@/components/controls/MicroclimateToggle'
 import { TimeScrubber } from '@/components/controls/TimeScrubber'
 import { DemandChart } from '@/components/panels/DemandChart'
+import { ForecastChart } from '@/components/panels/ForecastChart'
 import { DistrictCard } from '@/components/panels/DistrictCard'
 import { BriefingCard } from '@/components/panels/BriefingCard'
 import { ZoomControls } from '@/components/map/ZoomControls'
@@ -23,6 +24,7 @@ export function ComparisonView(props: ViewProps) {
     onHourChange,
     playing,
     onPlayingChange,
+    chart,
     chartTab,
     onChartTabChange,
     settings,
@@ -58,13 +60,25 @@ export function ComparisonView(props: ViewProps) {
           />
           <Panel className="flex h-[288px] min-w-0 flex-1 flex-col px-5 pb-3 pt-4">
             <div className="min-h-0 flex-1">
-              <DemandChart
-                scenario={scenario}
-                hour={hour}
-                tab={chartTab}
-                onTabChange={onChartTabChange}
-                markerInterval={settings.markerInterval}
-              />
+              {chart.mode === 'forecast' ? (
+                <ForecastChart
+                  day={chart.day}
+                  districtName={chart.districtName}
+                  identityColor={chart.identityColor}
+                  hour={hour}
+                  tab={chartTab}
+                  onTabChange={onChartTabChange}
+                  missingNote={chart.missingNote}
+                />
+              ) : (
+                <DemandChart
+                  scenario={scenario}
+                  hour={hour}
+                  tab={chartTab}
+                  onTabChange={onChartTabChange}
+                  markerInterval={settings.markerInterval}
+                />
+              )}
             </div>
             <TimeScrubber
               hour={hour}

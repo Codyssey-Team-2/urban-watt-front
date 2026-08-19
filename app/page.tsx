@@ -20,7 +20,7 @@ import {
   getRiskLevel,
 } from '@/lib/mock'
 import { interpolateHour } from '@/lib/api/adapt'
-import type { CardModel } from '@/components/views/shared'
+import type { CardModel, ChartModel } from '@/components/views/shared'
 import type { RiskLevel } from '@/lib/types'
 import { useBriefing, useDashboard } from '@/lib/api/useDashboard'
 import { isApiEnabled } from '@/lib/api/client'
@@ -43,7 +43,7 @@ const VIEWS: Record<ViewKey, (props: ViewProps) => React.ReactNode> = {
   comparison: ComparisonView,
   map: MapFocusView,
   chart: ChartFocusView,
-  data: () => <DataInfoView />,
+  data: DataInfoView,
   settings: SettingsView,
 }
 
@@ -154,6 +154,33 @@ export default function Page() {
     })
   }, [dashboard, scenario, hour])
 
+  /**
+   * 두 동이 모두 준비됐을 때만 비교 차트를 그린다는 계약(8항)을 따른다.
+   * 한쪽만 선으로 그리면 없는 쪽이 0인 것처럼 읽힌다.
+   * 대신 준비된 동의 실측 곡선을 단독으로 보여준다 — 위험선을 넘는 순간이
+   * 이 화면의 핵심이라 빈 화면으로 두지 않는다.
+   */
+  const chart: ChartModel = useMemo(() => {
+    if (dashboard.status !== 'ready') return { mode: 'mock' }
+    const { districts, days, meta } = dashboard.data
+    const withDay = districts.find((d) => days[d.code])
+    if (!withDay) return { mode: 'mock' }
+
+    const missing = districts
+      .filter((d) => !days[d.code])
+      .map((d) => meta.dongs.find((x) => x.code === d.code))
+      .filter(Boolean)
+    return {
+      mode: 'forecast',
+      day: days[withDay.code],
+      districtName: withDay.name,
+      identityColor: withDay.identityColor,
+      missingNote: missing.length
+        ? `${missing.map((m) => m!.name).join(' · ')}: ${missing[0]!.forecast_note ?? '시계열 없음'}`
+        : null,
+    }
+  }, [dashboard])
+
   // 기상만·미기후 예측이 아직 없으면 토글을 잠근다.
   const scenarioNote =
     dashboard.status === 'ready'
@@ -217,6 +244,7 @@ export default function Page() {
     onBriefingRetry: briefing.retry,
     dashboard,
     cards,
+    chart,
     scenarioNote,
     mapRef,
     viewport,

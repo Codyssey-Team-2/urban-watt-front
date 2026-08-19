@@ -6,6 +6,7 @@ import { WeatherChips } from '@/components/controls/WeatherChips'
 import { MicroclimateToggle } from '@/components/controls/MicroclimateToggle'
 import { TimeScrubber } from '@/components/controls/TimeScrubber'
 import { DemandChart } from '@/components/panels/DemandChart'
+import { ForecastChart } from '@/components/panels/ForecastChart'
 import { cn } from '@/lib/cn'
 import {
   DISTRICTS,
@@ -27,6 +28,7 @@ export function ChartFocusView({
   onHourChange,
   playing,
   onPlayingChange,
+  chart,
   chartTab,
   onChartTabChange,
   settings,
@@ -47,13 +49,25 @@ export function ChartFocusView({
 
       <Panel className="flex min-h-0 flex-1 flex-col px-6 pb-4 pt-5">
         <div className="min-h-0 flex-1">
-          <DemandChart
-            scenario={scenario}
-            hour={hour}
-            tab={chartTab}
-            onTabChange={onChartTabChange}
-            markerInterval={settings.markerInterval}
-          />
+          {chart.mode === 'forecast' ? (
+            <ForecastChart
+              day={chart.day}
+              districtName={chart.districtName}
+              identityColor={chart.identityColor}
+              hour={hour}
+              tab={chartTab}
+              onTabChange={onChartTabChange}
+              missingNote={chart.missingNote}
+            />
+          ) : (
+            <DemandChart
+              scenario={scenario}
+              hour={hour}
+              tab={chartTab}
+              onTabChange={onChartTabChange}
+              markerInterval={settings.markerInterval}
+            />
+          )}
         </div>
         <TimeScrubber
           hour={hour}

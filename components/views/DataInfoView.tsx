@@ -2,6 +2,7 @@
 
 import { Panel } from '@/components/layout/Panel'
 import { DISTRICTS, DEMO_DATE } from '@/lib/mock'
+import type { ViewProps } from './shared'
 
 const SOURCES = [
   {
@@ -68,18 +69,35 @@ function Section({
 }
 
 /** 데이터 출처와 모델 정의, 그리고 한계를 밝히는 화면. */
-export function DataInfoView() {
+export function DataInfoView({ dashboard }: ViewProps) {
+  const live = dashboard.status === 'ready' ? dashboard.data : null
+  const meta = live?.meta
+  const compare = live?.compare
+
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-5 overflow-y-auto pr-1">
-      {/* 데모 데이터라는 사실을 화면에서 숨기지 않는다. */}
-      <Panel tone="danger" className="px-6 py-4">
-        <div className="text-[15px] font-semibold text-danger-text-dark">
-          현재 화면의 수치는 목데이터입니다
+      {/* 서버가 지금 무엇으로 답하고 있는지를 화면이 스스로 말하게 한다. */}
+      <Panel tone={meta ? 'default' : 'danger'} className="px-6 py-4">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="text-[15px] font-semibold text-ink">
+            {meta ? `${meta.service} ${meta.version}` : '분석 서버 미연결'}
+          </span>
+          {meta && (
+            <span className="rounded-full bg-brand-light px-2.5 py-0.5 text-[13px] font-semibold text-brand-dark">
+              {meta.mode}
+            </span>
+          )}
         </div>
         <p className="mt-1 text-[13px] leading-relaxed text-muted">
-          아래 출처는 실제 연동 예정 데이터셋이며, 지금 표시되는 값은 시연용으로
-          구성한 것입니다. 법정동 경계도 실제 경계가 아닌 근사 도형입니다.
+          {meta
+            ? meta.mode_text
+            : '아래 수치는 시연용 목데이터입니다. 서버가 연결되면 실측값으로 대체됩니다.'}
         </p>
+        {meta?.period?.start && (
+          <p className="tnum mt-1 text-[13px] text-faint">
+            분석 기간 {meta.period.start} ~ {meta.period.end}
+          </p>
+        )}
       </Panel>
 
       <Section title="데이터 출처">
@@ -112,9 +130,7 @@ export function DataInfoView() {
                 {m.name}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] leading-relaxed text-muted">
-                  {m.input}
-                </p>
+                <p className="text-[13px] leading-relaxed text-muted">{m.input}</p>
                 <p className="mt-0.5 text-[13px] leading-relaxed text-faint">
                   {m.note}
                 </p>
@@ -124,72 +140,100 @@ export function DataInfoView() {
         </ul>
       </Section>
 
-      <Section title="대상 지역">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-hair text-[13px] text-faint">
-              <th className="pb-2 font-normal">법정동</th>
-              <th className="pb-2 text-right font-normal">식생피복률</th>
-              <th className="pb-2 text-right font-normal">불투수피복률</th>
-              <th className="pb-2 text-right font-normal">냉방 균형점</th>
-              <th className="pb-2 text-right font-normal">수요 기울기</th>
-            </tr>
-          </thead>
-          <tbody>
-            {DISTRICTS.map((d) => {
-              const m = d.microclimate
-              const urban = d.variant === 'urban'
-              return (
-                <tr key={d.code} className="border-b border-hair last:border-0">
-                  <td className="py-2.5">
-                    <span className="flex items-center gap-2 text-[15px] text-ink">
-                      <span
-                        aria-hidden
-                        className={`inline-block size-2 rounded-full ${urban ? 'bg-urban' : 'bg-cool'}`}
-                      />
-                      {d.name}
-                    </span>
-                    <span className="tnum text-[13px] text-faint">{d.code}</span>
-                  </td>
-                  <td className="tnum py-2.5 text-right text-[15px]">
-                    {m.vegetationRate}%
-                  </td>
-                  <td className="tnum py-2.5 text-right text-[15px]">
-                    {m.imperviousRate}%
-                  </td>
-                  <td className="tnum py-2.5 text-right text-[15px]">
-                    {m.balancePoint.toFixed(1)}°C
-                  </td>
-                  <td
-                    className={`tnum py-2.5 text-right text-[15px] ${urban ? 'font-semibold text-urban-text' : ''}`}
-                  >
-                    {m.coolingSlope.toFixed(1)}×
-                  </td>
+      <Section title="지역 비교">
+        {compare ? (
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-hair text-[13px] text-faint">
+                <th className="pb-2 font-normal">항목</th>
+                {compare.dongs.map((d) => (
+                  <th key={d.code} className="pb-2 text-right font-normal">
+                    {d.name}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {compare.rows.map((row) => (
+                <tr key={row.label} className="border-b border-hair last:border-0">
+                  <td className="py-2.5 text-[15px] text-ink">{row.label}</td>
+                  {/* 값은 동 이름이 아니라 10자리 법정동코드로 찾는다 */}
+                  {compare.dongs.map((d) => (
+                    <td
+                      key={d.code}
+                      className="tnum py-2.5 text-right text-[15px] text-ink"
+                    >
+                      {row.values[d.code] ?? '—'}
+                      {row.unit && (
+                        <span className="ml-0.5 text-[13px] text-faint">
+                          {row.unit}
+                        </span>
+                      )}
+                    </td>
+                  ))}
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-hair text-[13px] text-faint">
+                <th className="pb-2 font-normal">법정동</th>
+                <th className="pb-2 text-right font-normal">식생피복률</th>
+                <th className="pb-2 text-right font-normal">불투수피복률</th>
+                <th className="pb-2 text-right font-normal">냉방 시작 온도</th>
+              </tr>
+            </thead>
+            <tbody>
+              {DISTRICTS.map((d) => {
+                const m = d.microclimate
+                return (
+                  <tr key={d.code} className="border-b border-hair last:border-0">
+                    <td className="py-2.5 text-[15px] text-ink">{d.name}</td>
+                    <td className="tnum py-2.5 text-right text-[15px]">
+                      {m.vegetationRate}%
+                    </td>
+                    <td className="tnum py-2.5 text-right text-[15px]">
+                      {m.imperviousRate}%
+                    </td>
+                    <td className="tnum py-2.5 text-right text-[15px]">
+                      {m.balancePoint.toFixed(1)}°C
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
       </Section>
+
+      {meta && meta.pending.length > 0 && (
+        <Section title="확보 중인 항목">
+          <ul className="flex flex-col gap-2 text-[13px] leading-relaxed text-muted">
+            {meta.pending.map((item) => (
+              <li key={item}>· {item}</li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       <Section title="해석상 한계">
         <ul className="flex flex-col gap-2 text-[13px] leading-relaxed text-muted">
-          <li>
-            · 기준일이 {DEMO_DATE} 단일 폭염일입니다. 계절 전체로 일반화하기에는
-            표본이 부족합니다.
-          </li>
-          <li>
-            · 두 개 법정동만 비교했습니다. 지역 특성이 다른 동에서 같은 크기의
-            개선이 나온다고 보장할 수 없습니다.
-          </li>
-          <li>
-            · 냉방 균형점과 기울기는 관측 기간 내 회귀 결과이며, 건물 용도 구성이
-            바뀌면 함께 변합니다.
-          </li>
-          <li>
-            · 지도 채색은 절대 전력량이 아니라 평시 대비 초과율입니다. 수요가 큰
-            지역이 곧 위험한 지역은 아닙니다.
-          </li>
+          {meta ? (
+            meta.caveats.map((c) => <li key={c}>· {c}</li>)
+          ) : (
+            <>
+              <li>
+                · 기준일이 {DEMO_DATE} 단일 폭염일입니다. 계절 전체로 일반화하기에는
+                표본이 부족합니다.
+              </li>
+              <li>
+                · 지도 채색은 절대 전력량이 아니라 위험선 대비 비율입니다. 수요가 큰
+                지역이 곧 위험한 지역은 아닙니다.
+              </li>
+            </>
+          )}
           <li>
             · 원본 데이터는 정시 단위입니다. 시간대 재생 중 정시 사이에 표시되는
             값은 앞뒤 정시를 선형 보간한 것으로, 실측된 값이 아닙니다.
