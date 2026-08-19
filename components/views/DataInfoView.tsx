@@ -1,7 +1,7 @@
 'use client'
 
 import { Panel } from '@/components/layout/Panel'
-import { DISTRICTS, DEMO_DATE, OVERALL_MAPE } from '@/lib/mock'
+import { DISTRICTS, DEMO_DATE } from '@/lib/mock'
 
 const SOURCES = [
   {
@@ -38,24 +38,17 @@ const SOURCES = [
   },
 ]
 
+/** 화면 상단 토글이 오가는 두 가지. 존재하지 않는 모델은 표에 싣지 않는다. */
 const MODELS = [
   {
-    key: 'A',
-    name: '기준 모델',
-    input: '달력 · 과거 부하 패턴',
-    mape: OVERALL_MAPE.a,
+    name: '기상만',
+    input: '달력 · 과거 부하 패턴 + 서울 대표 기상(ASOS)',
+    note: '두 지역에 같은 관측값이 적용됩니다.',
   },
   {
-    key: 'B',
-    name: '기상 반영',
-    input: 'A + 서울 대표 기상(ASOS)',
-    mape: OVERALL_MAPE.b,
-  },
-  {
-    key: 'C',
     name: '미기후 반영',
-    input: 'B + S-DoT 실측 · 도시공간 변수',
-    mape: OVERALL_MAPE.c,
+    input: '위 항목 + S-DoT 실측 기온 · 토지피복 기반 도시공간 변수',
+    note: '지역별 실측 미기후가 반영됩니다.',
   },
 ]
 
@@ -108,35 +101,27 @@ export function DataInfoView() {
         </ul>
       </Section>
 
-      <Section title="모델 구성">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-hair text-[13px] text-faint">
-              <th className="w-10 pb-2 font-normal">모델</th>
-              <th className="w-[120px] pb-2 font-normal">이름</th>
-              <th className="pb-2 font-normal">입력 변수</th>
-              <th className="w-20 pb-2 text-right font-normal">MAPE</th>
-            </tr>
-          </thead>
-          <tbody>
-            {MODELS.map((m) => (
-              <tr key={m.key} className="border-b border-hair last:border-0">
-                <td className="tnum py-2.5 text-[15px] font-semibold text-faint">
-                  {m.key}
-                </td>
-                <td className="py-2.5 text-[15px] text-ink">{m.name}</td>
-                <td className="py-2.5 text-[13px] text-muted">{m.input}</td>
-                <td
-                  className={`tnum py-2.5 text-right text-[15px] ${
-                    m.key === 'C' ? 'font-semibold text-brand-dark' : 'text-ink'
-                  }`}
-                >
-                  {m.mape.toFixed(1)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <Section title="예측 구성">
+        <ul className="flex flex-col gap-3">
+          {MODELS.map((m) => (
+            <li
+              key={m.name}
+              className="flex gap-4 border-b border-hair pb-3 last:border-0 last:pb-0"
+            >
+              <div className="w-[120px] flex-none text-[15px] text-ink">
+                {m.name}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] leading-relaxed text-muted">
+                  {m.input}
+                </p>
+                <p className="mt-0.5 text-[13px] leading-relaxed text-faint">
+                  {m.note}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
       </Section>
 
       <Section title="대상 지역">

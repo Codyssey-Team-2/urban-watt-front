@@ -6,12 +6,10 @@ import { WeatherChips } from '@/components/controls/WeatherChips'
 import { MicroclimateToggle } from '@/components/controls/MicroclimateToggle'
 import { TimeScrubber } from '@/components/controls/TimeScrubber'
 import { DemandChart } from '@/components/panels/DemandChart'
-import { ModelPerfCard } from '@/components/panels/ModelPerfCard'
 import { cn } from '@/lib/cn'
 import {
   DISTRICTS,
   GURO_CODE,
-  OVERALL_MAPE,
   getDemandAt,
   getExcessAt,
   getTempAt,
@@ -110,7 +108,6 @@ export function ChartFocusView({
           )
         })}
 
-        <ModelPerfCard mape={OVERALL_MAPE} className="w-[400px] flex-none" />
       </div>
 
       <div className="text-[13px] text-faint">
