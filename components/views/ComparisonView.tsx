@@ -74,7 +74,18 @@ export function ComparisonView(props: ViewProps) {
         </div>
       </div>
 
-      <aside className="flex w-[400px] flex-none flex-col gap-5 overflow-y-auto">
+      {/* 넓을 때: 우측 400px 세로 레일. 좁을 때: 하단 가로 스크롤 시트. */}
+      <aside
+        // 가로 배치에서 stretch가 걸리면 카드가 세로로 늘어나 빈 공간이 생긴다.
+        // 세로 레일로 돌아가면 stretch가 있어야 폭이 꽉 찬다.
+        className="flex min-h-0 shrink-0 items-start gap-5 overflow-x-auto pb-1 short:gap-3 lg:w-[400px] lg:flex-col lg:items-stretch lg:overflow-x-visible lg:pb-0"
+      >
+        {/*
+          카드만 스크롤하고 줌 컨트롤은 항상 보이게 둔다. 하나의 스크롤 영역에
+          같이 넣으면 화면이 낮을 때 컨트롤이 스크롤 밖으로 밀려 잘린다.
+          좁은 화면에서는 display:contents로 바깥 가로 배치에 그대로 참여시킨다.
+        */}
+        <div className="contents lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:gap-5 lg:overflow-y-auto short:lg:gap-3">
         {DISTRICTS.map((district) => {
           const forecast = getForecast(district.code, scenario)
           const point = forecast.hourly[hour]
@@ -84,7 +95,7 @@ export function ComparisonView(props: ViewProps) {
               district={district}
               forecast={forecast}
               demand={scenario === 'c' ? point.modelC : point.modelB}
-              className="shrink-0"
+              className="w-[320px] shrink-0 lg:w-auto"
             />
           )
         })}
@@ -92,12 +103,15 @@ export function ComparisonView(props: ViewProps) {
         <BriefingCard
           state={briefingState}
           onRetry={onBriefingRetry}
-          className="shrink-0"
+          className="w-[360px] shrink-0 lg:w-auto"
         />
 
-        <ModelPerfCard mape={OVERALL_MAPE} className="shrink-0" />
+        <ModelPerfCard
+          mape={OVERALL_MAPE}
+          className="w-[400px] shrink-0 lg:w-auto"
+        />
 
-        <div className="min-h-5 flex-1" />
+        </div>
 
         <ZoomControls
           onZoomIn={() => mapRef.current?.zoomIn()}

@@ -56,7 +56,7 @@ export function DistrictCard({
       accent={district.variant}
       className={cn('transition-colors duration-200', className)}
     >
-      <div className="px-5 pb-5 pt-4">
+      <div className="px-5 pb-5 pt-4 short:pb-3 short:pt-3">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[15px] font-semibold text-ink">
             {district.name}

@@ -107,7 +107,10 @@ export default function Page() {
           activeView={view}
           onViewChange={handleViewChange}
         />
-        <ActiveView {...viewProps} />
+        {/* 1024px 미만에서는 우측 레일을 아래로 내린다. 사이드바는 계속 왼쪽. */}
+        <div className="flex min-w-0 flex-1 flex-col gap-5 lg:flex-row">
+          <ActiveView {...viewProps} />
+        </div>
       </div>
 
       {/* 지도 배경 출처. OSM 데이터(ODbL)는 표기 의무가 있다. */}
@@ -123,7 +126,8 @@ export default function Page() {
             s === 'success' ? 'loading' : s === 'loading' ? 'error' : 'success',
           )
         }
-        className="tnum absolute bottom-1 right-1 rounded-full bg-ink/70 px-3 py-1 text-[13px] text-white"
+        // 하단 우측에 두면 화면이 낮을 때 줌 컨트롤을 덮는다. 상단 여백 띠로 뺀다.
+        className="tnum absolute right-6 top-0.5 rounded-full bg-ink/70 px-3 py-0.5 text-[13px] text-white"
       >
         브리핑 상태={briefingStatus}
       </button>

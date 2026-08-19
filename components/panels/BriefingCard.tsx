@@ -38,7 +38,7 @@ export function BriefingCard({
   className,
 }: BriefingCardProps) {
   return (
-    <Panel className={cn('px-5 py-4', className)}>
+    <Panel className={cn('px-5 py-4 short:py-3', className)}>
       <div className="flex items-center gap-2">
         <SparklesIcon size={16} className="flex-none text-brand" />
         <span className="text-[13px] font-semibold text-muted">AI 브리핑</span>
