@@ -144,3 +144,10 @@ export const WindIcon = ({ size = 20, className }: IconProps) => (
     <path d="M3 14h12a2.5 2.5 0 1 1-2.5 2.5" />
   </svg>
 )
+
+export const ClockIcon = ({ size = 20, className }: IconProps) => (
+  <svg {...base(size, className)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 2" />
+  </svg>
+)

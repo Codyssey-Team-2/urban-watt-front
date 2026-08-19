@@ -14,13 +14,23 @@ import type { ViewProps } from '@/components/views/shared'
 import {
   BRIEFINGS,
   CURRENT_HOUR,
+  DEMO_DATE,
   DISTRICTS,
+  GURO_CODE,
+  WEATHER,
   getDemandAt,
   getExcessAt,
   getRiskLevel,
+  getTempAt,
 } from '@/lib/mock'
 import { interpolateHour } from '@/lib/api/adapt'
-import type { CardModel, ChartModel } from '@/components/views/shared'
+import type {
+  CardModel,
+  ChartModel,
+  HeaderModel,
+  MapDistrict,
+  WeatherChip,
+} from '@/components/views/shared'
 import type { RiskLevel } from '@/lib/types'
 import { useBriefing, useDashboard } from '@/lib/api/useDashboard'
 import { isApiEnabled } from '@/lib/api/client'
@@ -181,6 +191,121 @@ export default function Page() {
     }
   }, [dashboard])
 
+  /** 지도 채색. 서버 등급 색을 그대로 쓰고, 없으면 지역색으로 떨어진다. */
+  const mapDistricts: MapDistrict[] = useMemo(() => {
+    if (dashboard.status !== 'ready') {
+      return DISTRICTS.map((d) => {
+        const excess = getExcessAt(d.code, scenario, hour)
+        const danger = getRiskLevel(excess) === 'danger'
+        return {
+          code: d.code,
+          name: d.name,
+          variant: d.variant,
+          headline: `+${Math.round(excess)}%`,
+          fillColor: danger
+            ? '#E57373'
+            : d.variant === 'cool'
+              ? '#6FC49A'
+              : '#7FA9E8',
+          fillOpacity: 0.2 + Math.min(excess, 50) / 50 * 0.46,
+          strokeColor: danger
+            ? '#C62828'
+            : d.variant === 'cool'
+              ? '#2E9E6B'
+              : '#2D6FD1',
+          danger,
+        }
+      })
+    }
+    const { districts, days } = dashboard.data
+    return districts.map((d) => {
+      const point = days[d.code] ? interpolateHour(days[d.code].hours, hour) : null
+      const variant: 'cool' | 'urban' =
+        d.identityColor === '#2E9E6B' ? 'cool' : 'urban'
+      const danger = point?.grade === '위험'
+      return {
+        code: d.code,
+        name: d.name,
+        variant,
+        headline: point
+          ? `${point.riskPercent.toFixed(0)}%`
+          : d.heat.index != null
+            ? `도시열 ${d.heat.index}`
+            : '—',
+        // 시계열이 있으면 그 시각의 등급 색, 없으면 도시열 등급 색을 쓴다.
+        fillColor: point?.color ?? d.heat.color,
+        fillOpacity: point
+          ? 0.25 + Math.min(point.riskPercent, 120) / 120 * 0.45
+          : 0.3,
+        strokeColor: danger ? '#C62828' : d.identityColor,
+        danger,
+      }
+    })
+  }, [dashboard, scenario, hour])
+
+  /** 상단 헤더와 기상 칩. 값이 없는 항목은 칩을 만들지 않는다. */
+  const header: HeaderModel = useMemo(() => {
+    if (dashboard.status !== 'ready') {
+      const temp = getTempAt(GURO_CODE, hour)
+      return {
+        date: DEMO_DATE.replace(/-/g, '.'),
+        tMax: WEATHER.asosTemp,
+        heatwave: WEATHER.isHeatwave,
+        chips: [
+          {
+            key: 'sdot',
+            label: 'S-DoT 격차',
+            value: `+${(temp.sdot - temp.asos).toFixed(1)}°C`,
+            emphasize: true,
+          },
+          { key: 'humidity', label: '습도', value: `${WEATHER.humidity}%` },
+          { key: 'wind', label: '풍속', value: `${WEATHER.windSpeed}m/s` },
+        ],
+        source: '서울 열린데이터광장 · S-DoT',
+      }
+    }
+
+    const { districts, days, meta } = dashboard.data
+    const day = Object.values(days)[0]
+    const chips: WeatherChip[] = []
+    // 계약대로 원자료가 없는 값은 칩을 아예 만들지 않는다.
+    if (day?.weather.humidity != null)
+      chips.push({
+        key: 'humidity',
+        label: '습도',
+        value: `${day.weather.humidity}%`,
+      })
+    if (day?.weather.wind != null)
+      chips.push({
+        key: 'wind',
+        label: '풍속',
+        value: `${day.weather.wind}m/s`,
+      })
+    // 빈자리는 서버가 이미 문장으로 만들어 준 값으로 채운다.
+    const withRisk = districts.find((d) => d.peak.riskDaysText)
+    if (withRisk?.peak.riskDaysText)
+      chips.push({
+        key: 'riskDays',
+        label: `${withRisk.name} 위험일`,
+        value: withRisk.peak.riskDaysText.replace(/^여름 /, ''),
+      })
+    const withPattern = districts.find((d) => d.demand.pattern)
+    if (withPattern?.demand.pattern)
+      chips.push({
+        key: 'pattern',
+        label: `${withPattern.name} 수요 패턴`,
+        value: withPattern.demand.pattern,
+      })
+
+    return {
+      date: (day?.date ?? meta.period?.start ?? '').replace(/-/g, '.'),
+      tMax: day?.weather.tMax ?? null,
+      heatwave: day?.weather.heatwave ?? false,
+      chips,
+      source: `${meta.service} · ${meta.mode}`,
+    }
+  }, [dashboard, hour])
+
   // 기상만·미기후 예측이 아직 없으면 토글을 잠근다.
   const scenarioNote =
     dashboard.status === 'ready'
@@ -245,6 +370,8 @@ export default function Page() {
     dashboard,
     cards,
     chart,
+    mapDistricts,
+    header,
     scenarioNote,
     mapRef,
     viewport,
@@ -256,8 +383,7 @@ export default function Page() {
           다시 만들면 전환할 때마다 깜빡이고 초기화 비용이 든다. */}
       <div className="absolute inset-0 bg-mapbase">
         <MapView
-          scenario={scenario}
-          hour={hour}
+          districts={mapDistricts}
           padding={VIEW_MAP_PADDING[view]}
           showLabels={settings.showMapLabels}
           onReady={handleMapReady}

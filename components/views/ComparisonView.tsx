@@ -20,6 +20,7 @@ export function ComparisonView(props: ViewProps) {
     scenario,
     onScenarioChange,
     scenarioNote,
+    header,
     hour,
     onHourChange,
     playing,
@@ -41,8 +42,8 @@ export function ComparisonView(props: ViewProps) {
     <>
       <div className="flex min-w-0 flex-1 flex-col gap-5">
         <div className="flex flex-wrap items-start gap-5">
-          <HeaderCard hour={hour} />
-          <WeatherChips hour={hour} />
+          <HeaderCard hour={hour} header={header} />
+          <WeatherChips chips={header.chips} />
           <MicroclimateToggle
             scenario={scenario}
             onChange={onScenarioChange}
@@ -86,6 +87,7 @@ export function ComparisonView(props: ViewProps) {
               playing={playing}
               onPlayingChange={onPlayingChange}
               stepMs={PLAYBACK_SPEED[settings.playbackSpeed]}
+              source={header.source}
             />
           </Panel>
         </div>
