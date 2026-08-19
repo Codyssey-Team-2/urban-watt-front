@@ -26,6 +26,8 @@ export function Panel({
     <div
       className={cn(
         'rounded-2xl border bg-white/96 backdrop-blur-[14px]',
+        // 토글 시 tone이 바뀌면 테두리와 그림자가 같이 움직여야 한 몸으로 보인다.
+        'transition-[border-color,box-shadow] duration-200',
         tone === 'warm'
           ? 'border-[rgba(210,84,58,0.30)] shadow-panel-warm'
           : 'border-[rgba(22,60,42,0.10)] shadow-panel',

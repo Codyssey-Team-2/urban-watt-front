@@ -11,6 +11,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import {
   DISTRICTS,
   DISTRICT_BOUNDS,
+  HAN_RIVER,
   MAP_PADDING,
   SEOUL_MUNICIPALITIES,
   SEOUL_OUTLINE,
@@ -112,6 +113,15 @@ export function MapView({
         type: 'line',
         source: 'seoul',
         paint: { 'line-color': '#D4E2D3', 'line-width': 1.5 },
+      })
+
+      // 한강은 서울 지도에서 가장 강한 지형 단서라 자치구 경계보다 먼저 깐다.
+      map.addSource('han', { type: 'geojson', data: HAN_RIVER })
+      map.addLayer({
+        id: 'han-fill',
+        type: 'fill',
+        source: 'han',
+        paint: { 'fill-color': '#D6E8F2', 'fill-opacity': 0.9 },
       })
 
       // 자치구 경계선이 있어야 지도가 '서울'로 읽힌다. 대상 법정동보다

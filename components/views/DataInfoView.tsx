@@ -24,6 +24,18 @@ const SOURCES = [
     org: '환경부',
     detail: '식생피복률·불투수피복률. 도시공간 변수로 사용.',
   },
+  {
+    name: '서울시 행정경계',
+    org: 'southkorea/seoul-maps',
+    detail:
+      '자치구 25개와 법정동 경계(2015년, 도로명주소 기반). 단순화해 앱에 포함.',
+  },
+  {
+    name: '한강 수역',
+    org: 'OpenStreetMap 기여자 · ODbL',
+    detail:
+      '지도 배경의 한강 형상. 서울 경계로 잘라 단순화했습니다. © OpenStreetMap contributors.',
+  },
 ]
 
 const MODELS = [

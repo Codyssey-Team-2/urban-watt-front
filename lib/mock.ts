@@ -1,3 +1,4 @@
+import hanRiver from './geo/han-river.json'
 import seoulOutline from './geo/seoul-outline.json'
 import seoulMunicipalities from './geo/seoul-municipalities.json'
 import targetDistricts from './geo/target-districts.json'
@@ -234,6 +235,14 @@ export const BRIEFINGS: Record<ScenarioKey, Briefing> = {
 // 네트워크에 의존하지 않도록 레포에 포함한다.
 
 export const SEOUL_OUTLINE = seoulOutline as GeoJSON.Feature<
+  GeoJSON.Polygon | GeoJSON.MultiPolygon
+>
+
+/**
+ * 한강 수역. OpenStreetMap 기여자들의 데이터(ODbL)를 서울 경계로 잘라
+ * 단순화한 것이다. 출처 표기는 데이터 정보 화면에 있다.
+ */
+export const HAN_RIVER = hanRiver as GeoJSON.Feature<
   GeoJSON.Polygon | GeoJSON.MultiPolygon
 >
 
