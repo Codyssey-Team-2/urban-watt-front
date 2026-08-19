@@ -17,7 +17,12 @@ export interface ViewProps {
   settings: Settings
   onSettingsChange: (settings: Settings) => void
   briefingState: BriefingState
+  briefingSource?: string
+  briefingUnverified?: string[]
   onBriefingRetry: () => void
+  dashboard: import('@/lib/api/useDashboard').Loadable<
+    import('@/lib/api/useDashboard').DashboardData
+  >
   mapRef: React.RefObject<MapController | null>
   viewport: import('@/components/map/MapView').Viewport | null
 }

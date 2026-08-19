@@ -15,11 +15,17 @@ export type BriefingState =
   | { status: 'error'; message?: string }
   | { status: 'success'; briefing: Briefing }
 
+
 interface BriefingCardProps {
   state: BriefingState
   source?: string
   onRetry?: () => void
   className?: string
+  /**
+   * 사실표에 없는 숫자가 문장에 섞였을 때 서버가 알려주는 목록.
+   * 비어 있지 않으면 그대로 내보내기 전에 확인이 필요하다는 신호다.
+   */
+  unverifiedNumbers?: string[]
 }
 
 function Skeleton({ width }: { width: string }) {
@@ -36,6 +42,7 @@ export function BriefingCard({
   source = 'Gemini',
   onRetry,
   className,
+  unverifiedNumbers,
 }: BriefingCardProps) {
   return (
     <Panel className={cn('px-5 py-4 short:py-3', className)}>
@@ -96,6 +103,11 @@ export function BriefingCard({
                 </li>
               ))}
             </ul>
+          )}
+          {unverifiedNumbers && unverifiedNumbers.length > 0 && (
+            <p className="mt-2.5 rounded-lg bg-caution-light px-3 py-2 text-[13px] leading-relaxed text-caution-text">
+              사실표에 없는 숫자가 포함됐습니다: {unverifiedNumbers.join(', ')}
+            </p>
           )}
           {state.briefing.caveat && (
             <p className="mt-2.5 border-t border-hair pt-2.5 text-[13px] leading-relaxed text-faint">

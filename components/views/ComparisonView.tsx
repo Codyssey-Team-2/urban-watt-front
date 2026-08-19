@@ -32,6 +32,8 @@ export function ComparisonView(props: ViewProps) {
     onChartTabChange,
     settings,
     briefingState,
+    briefingSource,
+    briefingUnverified,
     onBriefingRetry,
     mapRef,
     viewport,
@@ -106,6 +108,8 @@ export function ComparisonView(props: ViewProps) {
 
         <BriefingCard
           state={briefingState}
+          source={briefingSource}
+          unverifiedNumbers={briefingUnverified}
           onRetry={onBriefingRetry}
           className="w-[360px] shrink-0 lg:w-auto"
         />

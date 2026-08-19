@@ -82,13 +82,18 @@ export interface ForecastPoint extends Graded {
   hour: number
   usage_kwh: number
   baseline_kwh: number
+  /** 평시 기저수요 대비 추가 사용률. 위험도가 아니다. */
   extra_percent: number
   temperature: number
   /** 원자료가 없으면 null */
   humidity: number | null
   wind: number | null
-  /** 실측 ÷ 위험선 */
+  /** 실측 ÷ 위험선. 위험 등급은 이 값으로만 판정된다. */
   risk_ratio: number
+  /** risk_ratio를 백분율로. 헤드라인은 이 값을 쓴다. */
+  risk_percent: number
+  /** '위험선의 100.6%' */
+  risk_text: string
 }
 
 export interface DayWeather {
@@ -158,12 +163,12 @@ export interface DongsResponse {
 export interface CompareRow {
   label: string
   unit: string
-  /** 동 이름을 키로 하는 값 */
+  /** 10자리 법정동코드를 키로 하는 값 */
   values: Record<string, number | null>
 }
 
 export interface CompareResponse {
-  dongs: string[]
+  dongs: { code: string; name: string }[]
   rows: CompareRow[]
 }
 
@@ -178,7 +183,9 @@ export interface MetaResponse {
   mode_text: string
   period: Record<string, string>
   llm: Record<string, unknown>
-  dongs: Record<string, unknown>[]
+  dongs: MetaDong[]
+  /** 토글 활성화 판단용 */
+  forecast_scenarios: Record<ScenarioName, ScenarioStatus>
   pending: string[]
   caveats: string[]
 }
@@ -222,8 +229,29 @@ export interface BriefingResponse {
   prompt: { system: string; user: string } | null
 }
 
+/** 예측 시나리오. 실측만 준비돼 있고 기상만/미기후는 아직 없다. */
+export type ScenarioName = 'observed' | 'weather' | 'microclimate'
+
+export interface ScenarioStatus {
+  status: DataStatus
+  note: string | null
+}
+
+/** 동별 시계열 가용 여부. 요청 전에 여기서 확인한다. */
+export interface MetaDong {
+  code: string
+  name: string
+  loaded: boolean
+  forecast_status: DataStatus
+  forecast_dates: string[]
+  forecast_note: string | null
+}
+
 /** 법정동코드는 10자리. 이름으로 조회하지 않는다. */
 export const DONG_CODE = {
   jingwan: '1138011400',
   guro: '1153010200',
 } as const
+
+/** 시연 기준일. date를 생략해도 서버가 이 날짜로 답한다. */
+export const DEMO_DATE = '2022-07-10'

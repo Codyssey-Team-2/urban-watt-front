@@ -70,9 +70,16 @@ export interface HourView {
   hour: number
   usageKwh: number
   baselineKwh: number
+  /** 평시 기저수요 대비 추가 사용률. 위험도가 아니다. */
   extraPercent: number
   temperature: number
+  humidity: number | null
+  wind: number | null
+  /** 위험선 대비 비율. 등급은 이 값으로만 판정된다. */
   riskRatio: number
+  riskPercent: number
+  /** '위험선의 100.6%' */
+  riskText: string
   grade: string
   color: string
   message: string
@@ -170,7 +177,11 @@ export function adaptForecast(dto: ForecastResponse): DayView {
         baselineKwh: p.baseline_kwh,
         extraPercent: p.extra_percent,
         temperature: p.temperature,
+        humidity: p.humidity,
+        wind: p.wind,
         riskRatio: p.risk_ratio,
+        riskPercent: p.risk_percent,
+        riskText: p.risk_text,
         grade: p.grade,
         color: p.color,
         message: p.message,
@@ -202,7 +213,10 @@ export function interpolateHour(hours: HourView[], time: number): HourView | nul
     ),
     extraPercent: lerp(cur.extraPercent, next.extraPercent),
     temperature: lerp(cur.temperature, next.temperature),
-    riskRatio: Math.round((cur.riskRatio + (next.riskRatio - cur.riskRatio) * f) * 1000) / 1000,
-    // 등급·색·문구는 보간하지 않는다. 서버 판정이므로 현재 시각 것을 그대로 쓴다.
+    riskRatio:
+      Math.round((cur.riskRatio + (next.riskRatio - cur.riskRatio) * f) * 1000) /
+      1000,
+    riskPercent: lerp(cur.riskPercent, next.riskPercent),
+    // 등급·색·문구·문장은 보간하지 않는다. 서버 판정이므로 현재 시각 것을 그대로 쓴다.
   }
 }

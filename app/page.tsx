@@ -12,6 +12,8 @@ import { DataInfoView } from '@/components/views/DataInfoView'
 import { SettingsView } from '@/components/views/SettingsView'
 import type { ViewProps } from '@/components/views/shared'
 import { BRIEFINGS, CURRENT_HOUR } from '@/lib/mock'
+import { useBriefing, useDashboard } from '@/lib/api/useDashboard'
+import { isApiEnabled } from '@/lib/api/client'
 import {
   DEFAULT_SETTINGS,
   VIEW_MAP_PADDING,
@@ -47,15 +49,31 @@ export default function Page() {
   const [viewport, setViewport] = useState<Viewport | null>(null)
   const mapRef = useRef<MapController | null>(null)
 
-  // 브리핑 3상태 검수용 — 백엔드 연동 시 실제 fetch 상태로 대체된다.
-  const [briefingStatus, setBriefingStatus] =
-    useState<BriefingState['status']>('success')
-  const briefingState: BriefingState =
-    briefingStatus === 'success'
-      ? { status: 'success', briefing: BRIEFINGS[scenario] }
-      : briefingStatus === 'error'
-        ? { status: 'error' }
+  const dashboard = useDashboard()
+  const briefing = useBriefing()
+
+  // API가 붙어 있으면 서버 브리핑, 아니면 목데이터로 화면을 유지한다.
+  const briefingState: BriefingState = !isApiEnabled()
+    ? { status: 'success', briefing: BRIEFINGS[scenario] }
+    : briefing.state.status === 'ready'
+      ? {
+          status: 'success',
+          briefing: {
+            summary: briefing.state.data.text,
+            evidence: [],
+            caveat: briefing.state.data.note ?? undefined,
+          },
+        }
+      : briefing.state.status === 'error'
+        ? { status: 'error', message: briefing.state.message }
         : { status: 'loading' }
+
+  const briefingSource =
+    briefing.state.status === 'ready'
+      ? [briefing.state.data.provider, briefing.state.data.model]
+          .filter(Boolean)
+          .join(' · ')
+      : undefined
 
   const handleMapReady = useCallback((controller: MapController) => {
     mapRef.current = controller
@@ -80,7 +98,13 @@ export default function Page() {
     settings,
     onSettingsChange: setSettings,
     briefingState,
-    onBriefingRetry: () => setBriefingStatus('success'),
+    briefingSource,
+    briefingUnverified:
+      briefing.state.status === 'ready'
+        ? briefing.state.data.unverified_numbers
+        : undefined,
+    onBriefingRetry: briefing.retry,
+    dashboard,
     mapRef,
     viewport,
   }
@@ -121,19 +145,6 @@ export default function Page() {
         경계 southkorea/seoul-maps · 한강 © OpenStreetMap contributors
       </p>
 
-      {/* 브리핑 3상태 검수용 — 백엔드 연동 시 제거된다 */}
-      <button
-        type="button"
-        onClick={() =>
-          setBriefingStatus((s) =>
-            s === 'success' ? 'loading' : s === 'loading' ? 'error' : 'success',
-          )
-        }
-        // 하단 우측에 두면 화면이 낮을 때 줌 컨트롤을 덮는다. 상단 여백 띠로 뺀다.
-className="tnum pointer-events-auto absolute right-6 top-0.5 rounded-full bg-ink/70 px-3 py-0.5 text-[13px] text-white"
-      >
-        브리핑 상태={briefingStatus}
-      </button>
     </div>
   )
 }
