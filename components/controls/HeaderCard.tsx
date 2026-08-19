@@ -11,7 +11,7 @@ export function HeaderCard({ hour }: HeaderCardProps) {
     <Panel className="px-5 py-3">
       <div className="flex items-center gap-2.5">
         <span className="text-[15px] font-semibold tracking-[-0.015em] text-ink">
-          진관동 · 창신동
+          진관동 · 구로동
         </span>
         {WEATHER.isHeatwave && (
           <span className="rounded-full bg-warm-light px-2.5 py-0.5 text-[13px] font-semibold text-warm-text-dark">

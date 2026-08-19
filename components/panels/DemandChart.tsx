@@ -12,7 +12,7 @@ import {
   YAxis,
 } from 'recharts'
 import { cn } from '@/lib/cn'
-import { CHANGSIN_CODE, JINGWAN_CODE, PEAK_HOUR, getForecast } from '@/lib/mock'
+import { GURO_CODE, JINGWAN_CODE, PEAK_HOUR, getForecast } from '@/lib/mock'
 import type { ScenarioKey } from '@/lib/types'
 import type { ChartTab } from '@/lib/nav'
 
@@ -48,21 +48,21 @@ interface Series {
 }
 
 /**
- * 세 탭 모두 진관동=초록 / 창신동=코랄로 고정한다. 회색 파선은 지역이 아니라
+ * 세 탭 모두 진관동=초록 / 구로동=코랄로 고정한다. 회색 파선은 지역이 아니라
  * "미기후를 반영하지 않은 기준선"만을 뜻한다.
  *
  * 초록↔코랄은 적록색각에서 구분 여유가 크지 않아(deutan ΔE 6.5) 색만으로
- * 식별하게 두지 않는다 — 진관동은 원, 창신동은 마름모 마커를 4시간마다 찍어
+ * 식별하게 두지 않는다 — 진관동은 원, 구로동은 마름모 마커를 4시간마다 찍어
  * 모양으로도 구분되게 한다. 선 끝 라벨은 곡선이 수렴하는 구간에서 서로 겹쳐
  * 쓰지 않는다.
  */
 const SERIES: Record<TabKey, Series[]> = {
   demand: [
     { key: 'jingwan', name: '진관동', color: COOL, shape: 'circle' },
-    { key: 'changsin', name: '창신동', color: WARM, shape: 'diamond' },
+    { key: 'guro', name: '구로동', color: WARM, shape: 'diamond' },
     {
-      key: 'changsinBase',
-      name: '창신동 · 기상만',
+      key: 'guroBase',
+      name: '구로동 · 기상만',
       color: BASE,
       dashed: true,
       shape: 'none',
@@ -70,12 +70,12 @@ const SERIES: Record<TabKey, Series[]> = {
   ],
   temp: [
     { key: 'jingwanTemp', name: '진관동', color: COOL, shape: 'circle' },
-    { key: 'changsinTemp', name: '창신동', color: WARM, shape: 'diamond' },
+    { key: 'guroTemp', name: '구로동', color: WARM, shape: 'diamond' },
     { key: 'asos', name: '대표기상', color: BASE, dashed: true, shape: 'none' },
   ],
   error: [
     { key: 'jingwanErr', name: '진관동', color: COOL, shape: 'circle' },
-    { key: 'changsinErr', name: '창신동', color: WARM, shape: 'diamond' },
+    { key: 'guroErr', name: '구로동', color: WARM, shape: 'diamond' },
   ],
 }
 
@@ -99,22 +99,22 @@ export function DemandChart({
 
   const data = useMemo(() => {
     const j = getForecast(JINGWAN_CODE, scenario).hourly
-    const c = getForecast(CHANGSIN_CODE, scenario).hourly
+    const c = getForecast(GURO_CODE, scenario).hourly
     const pick = (p: (typeof j)[number]) =>
       scenario === 'c' ? p.modelC : p.modelB
     return j.map((point, h) => ({
       hour: h,
       jingwan: pick(point),
-      changsin: pick(c[h]),
+      guro: pick(c[h]),
       // 미기후 반영 상태일 때만, 기상만 썼다면 어땠을지를 유령선으로 겹쳐 보여준다.
-      changsinBase: scenario === 'c' ? c[h].modelB : null,
+      guroBase: scenario === 'c' ? c[h].modelB : null,
       jingwanTemp: point.sdot,
-      changsinTemp: c[h].sdot,
+      guroTemp: c[h].sdot,
       asos: point.asos,
       // 실측이 없는 시각(기준 시각 이후)은 선을 끊는다.
       jingwanErr:
         point.actual === null ? null : round1(point.actual - pick(point)),
-      changsinErr:
+      guroErr:
         c[h].actual === null ? null : round1(c[h].actual - pick(c[h])),
     }))
   }, [scenario])

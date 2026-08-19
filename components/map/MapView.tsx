@@ -11,8 +11,8 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import {
   DISTRICTS,
   DISTRICT_BOUNDS,
-  HAN_RIVER,
   MAP_PADDING,
+  SEOUL_MUNICIPALITIES,
   SEOUL_OUTLINE,
   districtFeatures,
   getForecast,
@@ -114,13 +114,14 @@ export function MapView({
         paint: { 'line-color': '#D4E2D3', 'line-width': 1.5 },
       })
 
-      map.addSource('han', { type: 'geojson', data: HAN_RIVER })
+      // 자치구 경계선이 있어야 지도가 '서울'로 읽힌다. 대상 법정동보다
+      // 훨씬 옅게 깔아서 초과율 채색을 방해하지 않는다.
+      map.addSource('gu', { type: 'geojson', data: SEOUL_MUNICIPALITIES })
       map.addLayer({
-        id: 'han-line',
+        id: 'gu-line',
         type: 'line',
-        source: 'han',
-        layout: { 'line-cap': 'round' },
-        paint: { 'line-color': '#DCEAF2', 'line-width': 9 },
+        source: 'gu',
+        paint: { 'line-color': '#D2E0D1', 'line-width': 1 },
       })
 
       map.addSource(SRC, { type: 'geojson', data: districtFeatures(scenario) })

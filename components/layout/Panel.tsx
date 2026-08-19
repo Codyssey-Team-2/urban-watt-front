@@ -4,7 +4,7 @@ import { cn } from '@/lib/cn'
 interface PanelProps {
   children: ReactNode
   className?: string
-  /** 창신동 카드처럼 위험을 강조해야 하는 패널 */
+  /** 구로동 카드처럼 위험을 강조해야 하는 패널 */
   tone?: 'default' | 'warm'
   /** 카드 상단 3px 컬러바 */
   accent?: 'cool' | 'warm' | null

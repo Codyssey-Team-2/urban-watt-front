@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'UrbanWatt · 지역 전력피크 예측',
   description:
-    '서울시 진관동·창신동의 미기후 기반 시간대별 전력수요와 피크 위험을 비교하는 대시보드',
+    '서울시 진관동·구로동의 미기후 기반 시간대별 전력수요와 피크 위험을 비교하는 대시보드',
 }
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {

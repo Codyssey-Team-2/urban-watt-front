@@ -88,7 +88,7 @@ export function SettingsView({ settings, onSettingsChange }: ViewProps) {
 
           <Row
             title="차트 마커 간격"
-            description="진관동은 원, 창신동은 마름모로 표시합니다. 초록과 코랄은 적록색각에서 구분 여유가 크지 않아, 색 외에 모양으로도 계열을 구분할 수 있게 한 장치입니다. 촘촘할수록 구분이 쉬워지고 선은 조금 지저분해집니다."
+            description="진관동은 원, 구로동은 마름모로 표시합니다. 초록과 코랄은 적록색각에서 구분 여유가 크지 않아, 색 외에 모양으로도 계열을 구분할 수 있게 한 장치입니다. 촘촘할수록 구분이 쉬워지고 선은 조금 지저분해집니다."
           >
             <Segmented
               value={settings.markerInterval}

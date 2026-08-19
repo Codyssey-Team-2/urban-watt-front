@@ -4,7 +4,7 @@ import {
   TemperatureIcon,
   WindIcon,
 } from '@/components/ui/icons'
-import { CHANGSIN_CODE, WEATHER, getForecast } from '@/lib/mock'
+import { GURO_CODE, WEATHER, getForecast } from '@/lib/mock'
 import { cn } from '@/lib/cn'
 import type { ComponentType } from 'react'
 
@@ -44,7 +44,7 @@ interface WeatherChipsProps {
 export function WeatherChips({ hour }: WeatherChipsProps) {
   // 격차는 시각에 따라 달라진다 — 낮에 벌어지고 새벽에 좁혀지는 게 핵심이라
   // 고정값이 아니라 선택된 시각의 실측 차이를 보여준다.
-  const point = getForecast(CHANGSIN_CODE, 'c').hourly[hour]
+  const point = getForecast(GURO_CODE, 'c').hourly[hour]
   const gap = Math.round((point.sdot - point.asos) * 10) / 10
 
   return (

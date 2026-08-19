@@ -1,3 +1,6 @@
+import seoulOutline from './geo/seoul-outline.json'
+import seoulMunicipalities from './geo/seoul-municipalities.json'
+import targetDistricts from './geo/target-districts.json'
 import type {
   Briefing,
   District,
@@ -13,8 +16,8 @@ export const DEMO_DATE = '2023-08-05'
 export const PEAK_HOUR = 15
 export const CURRENT_HOUR = 15
 
-export const JINGWAN_CODE = '1138010600'
-export const CHANGSIN_CODE = '1111017200'
+export const JINGWAN_CODE = '1138011400'
+export const GURO_CODE = '1153010200'
 
 // ── 지역 ────────────────────────────────────────────────────────────────
 
@@ -23,7 +26,7 @@ export const DISTRICTS: District[] = [
     code: JINGWAN_CODE,
     name: '진관동',
     variant: 'cool',
-    center: [126.9352, 37.6372],
+    center: [126.9379, 37.6397],
     microclimate: {
       vegetationRate: 58,
       imperviousRate: 35,
@@ -32,10 +35,10 @@ export const DISTRICTS: District[] = [
     },
   },
   {
-    code: CHANGSIN_CODE,
-    name: '창신동',
+    code: GURO_CODE,
+    name: '구로동',
     variant: 'warm',
-    center: [127.0104, 37.5745],
+    center: [126.8847, 37.4942],
     microclimate: {
       vegetationRate: 13,
       imperviousRate: 83,
@@ -62,7 +65,7 @@ export const WEATHER: WeatherSnapshot = {
 // ── 시간대별 수요 곡선 ──────────────────────────────────────────────────
 //
 // 새벽 저점 → 15시 피크 → 야간 하강.
-// 창신동은 오전엔 완만하다가 11~15시에 급격히 꺾인다 (불투수 83%, 기울기 1.8x).
+// 구로동은 오전엔 완만하다가 11~15시에 급격히 꺾인다 (불투수 83%, 기울기 1.8x).
 
 const COOL_SHAPE = [
   0.30, 0.27, 0.25, 0.24, 0.24, 0.26, 0.31, 0.38, 0.46, 0.55, 0.64, 0.72,
@@ -90,11 +93,11 @@ const ASOS_MAX = 35.4
 
 /**
  * S-DoT 실측과 대표 기상의 격차. 낮 동안 벌어지고 새벽엔 좁혀진다.
- * 창신동은 불투수면 축열로 더 뜨겁고, 진관동은 녹지 증발산으로 더 시원하다.
+ * 구로동은 불투수면 축열로 더 뜨겁고, 진관동은 녹지 증발산으로 더 시원하다.
  */
 const SDOT_OFFSET: Record<string, { day: number; night: number }> = {
   [JINGWAN_CODE]: { day: -1.1, night: -0.3 },
-  [CHANGSIN_CODE]: { day: 2.4, night: 0.7 },
+  [GURO_CODE]: { day: 2.4, night: 0.7 },
 }
 
 interface CurveSpec {
@@ -115,11 +118,11 @@ const CURVES: Record<string, CurveSpec> = {
     // 녹지가 많아 미기후를 넣어도 예측이 거의 안 변한다 — 이게 대조군이다.
     excess: { b: 14, c: 15 },
   },
-  [CHANGSIN_CODE]: {
+  [GURO_CODE]: {
     shape: WARM_SHAPE,
     normalPeak: 52.0,
     trough: 26.0,
-    // 토글의 핵심: 기상만 쓰면 +28%로 과소추정, 미기후를 넣으면 +47%.
+      // 토글의 핵심: 기상만 쓰면 +28%로 과소추정, 미기후를 넣으면 +47%.
     excess: { b: 28, c: 47 },
   },
 }
@@ -160,7 +163,7 @@ function buildHourly(code: string): HourlyPoint[] {
 
 const RISK: Record<string, Record<ScenarioKey, Forecast['riskLevel']>> = {
   [JINGWAN_CODE]: { b: 'stable', c: 'stable' },
-  [CHANGSIN_CODE]: { b: 'caution', c: 'danger' },
+  [GURO_CODE]: { b: 'caution', c: 'danger' },
 }
 
 export function getForecast(code: string, scenario: ScenarioKey): Forecast {
@@ -188,7 +191,7 @@ export const METRICS: Metrics[] = [
     rmse: { a: 4.1, b: 2.9, c: 2.6 },
   },
   {
-    districtCode: CHANGSIN_CODE,
+    districtCode: GURO_CODE,
     mape: { a: 17.2, b: 11.7, c: 6.4 },
     rmse: { a: 8.3, b: 5.6, c: 3.1 },
   },
@@ -205,7 +208,7 @@ export const getMetrics = (code: string): Metrics =>
 export const BRIEFINGS: Record<ScenarioKey, Briefing> = {
   b: {
     summary:
-      '서울 대표 기상(ASOS)만으로는 두 지역이 같은 35.4°C를 겪은 것으로 계산됩니다. 창신동 피크는 평시 대비 +28%로 예측됩니다.',
+      '서울 대표 기상(ASOS)만으로는 두 지역이 같은 35.4°C를 겪은 것으로 계산됩니다. 구로동 피크는 평시 대비 +28%로 예측됩니다.',
     evidence: [
       '두 지역에 동일한 관측값이 적용됨',
       '지역 간 예측 격차는 건물 용도 구성에서만 발생',
@@ -214,7 +217,7 @@ export const BRIEFINGS: Record<ScenarioKey, Briefing> = {
   },
   c: {
     summary:
-      '창신동은 진관동보다 2.8°C 낮은 기온에서 냉방이 시작되며, 동일 기온에서 수요 증가 기울기가 1.8배로 관측됩니다. 피크는 평시 대비 +47%까지 올라갑니다.',
+      '구로동은 진관동보다 2.8°C 낮은 기온에서 냉방이 시작되며, 동일 기온에서 수요 증가 기울기가 1.8배로 관측됩니다. 피크는 평시 대비 +47%까지 올라갑니다.',
     evidence: [
       'S-DoT 실측이 ASOS 대비 +2.4°C 높음',
       '불투수피복률 83% vs 35%, 식생피복률 13% vs 58%',
@@ -224,60 +227,34 @@ export const BRIEFINGS: Record<ScenarioKey, Briefing> = {
   },
 }
 
-// ── 법정동 경계 (근사) ──────────────────────────────────────────────────
+// ── 서울 실제 경계 ──────────────────────────────────────────────────────
 //
-// 실제 법정동 경계 GeoJSON이 아니라 데모용 근사 폴리곤이다.
-// 실 데이터로 교체할 때 이 상수만 바꾸면 MapView는 그대로 동작한다.
-// (실 데이터는 EPSG:5179 -> 4326 변환 후 mapshaper로 단순화 필요)
+// 출처: southkorea/seoul-maps (도로명주소 기반 2015년 경계).
+// EPSG:4326으로 이미 변환되어 있고, mapshaper로 단순화해 lib/geo에 넣어 두었다.
+// 네트워크에 의존하지 않도록 레포에 포함한다.
 
-function polygon(
-  [lng, lat]: [number, number],
-  rx: number,
-  ry: number,
-  wobble: number[],
-): [number, number][] {
-  const ring = wobble.map((w, i) => {
-    const a = (i / wobble.length) * Math.PI * 2
-    return [
-      round5(lng + Math.cos(a) * rx * w),
-      round5(lat + Math.sin(a) * ry * w),
-    ] as [number, number]
-  })
-  return [...ring, ring[0]]
-}
+export const SEOUL_OUTLINE = seoulOutline as GeoJSON.Feature<
+  GeoJSON.Polygon | GeoJSON.MultiPolygon
+>
 
-const round5 = (n: number) => Math.round(n * 1e5) / 1e5
+/** 자치구 25개. 실제 지도처럼 보이게 하는 배경 격자 역할. */
+export const SEOUL_MUNICIPALITIES = seoulMunicipalities as GeoJSON.FeatureCollection<
+  GeoJSON.Polygon | GeoJSON.MultiPolygon,
+  { code: string; name: string }
+>
 
-/** 진관동: 북한산 자락을 낀 넓고 완만한 형태 */
-const JINGWAN_RING = polygon(
-  [126.9352, 37.6372],
-  0.0235,
-  0.0205,
-  [1.0, 0.92, 1.08, 0.95, 1.12, 0.88, 1.0, 1.05, 0.9, 1.06],
-)
-
-/** 창신동: 좁고 세로로 긴 저층 밀집지 */
-const CHANGSIN_RING = polygon(
-  [127.0104, 37.5745],
-  0.0072,
-  0.0092,
-  [1.0, 0.86, 1.1, 0.82, 1.14, 0.9, 1.02, 0.84, 1.12, 0.88],
-)
-
-export const DISTRICT_GEOJSON: GeoJSON.FeatureCollection<
-  GeoJSON.Polygon,
+/** 대상 법정동 실제 경계 */
+export const DISTRICT_GEOJSON = targetDistricts as GeoJSON.FeatureCollection<
+  GeoJSON.Polygon | GeoJSON.MultiPolygon,
   { code: string; name: string; variant: District['variant'] }
-> = {
-  type: 'FeatureCollection',
-  features: DISTRICTS.map((d) => ({
-    type: 'Feature',
-    id: d.code,
-    properties: { code: d.code, name: d.name, variant: d.variant },
-    geometry: {
-      type: 'Polygon',
-      coordinates: [d.code === JINGWAN_CODE ? JINGWAN_RING : CHANGSIN_RING],
-    },
-  })),
+>
+
+/** 서울 전체가 들어가는 경위도 범위 — 미니맵 좌표 변환에 쓴다. */
+export const SEOUL_BBOX = {
+  minLng: 126.7674,
+  maxLng: 127.1828,
+  minLat: 37.4283,
+  maxLat: 37.7013,
 }
 
 /**
@@ -286,8 +263,10 @@ export const DISTRICT_GEOJSON: GeoJSON.FeatureCollection<
  * 지도는 이 범위에 맞춰 자동으로 잡는다.
  */
 export const DISTRICT_BOUNDS: [[number, number], [number, number]] = (() => {
-  const coords = DISTRICT_GEOJSON.features.flatMap(
-    (f) => f.geometry.coordinates[0],
+  const coords = DISTRICT_GEOJSON.features.flatMap((f) =>
+    f.geometry.type === 'Polygon'
+      ? f.geometry.coordinates.flat()
+      : f.geometry.coordinates.flat(2),
   )
   const lngs = coords.map((c) => c[0])
   const lats = coords.map((c) => c[1])
@@ -302,62 +281,6 @@ export const DISTRICT_BOUNDS: [[number, number], [number, number]] = (() => {
  * 사이드바·우측 레일·상단 카드·하단 차트를 피해 여백을 준다.
  */
 export const MAP_PADDING = { top: 110, bottom: 340, left: 330, right: 460 }
-
-// ── 서울 맥락 (근사) ────────────────────────────────────────────────────
-//
-// 타일 없이 단색 배경만 쓰기 때문에, 두 폴리곤만 떠 있으면 어디인지 알 수 없다.
-// 서울 외곽선과 한강을 아주 옅게 깔아 위치 감각만 만든다. 실제 경계가 아니다.
-
-const SEOUL_RING: [number, number][] = [
-  [126.79, 37.58],
-  [126.83, 37.63],
-  [126.88, 37.68],
-  [126.96, 37.7],
-  [127.04, 37.69],
-  [127.1, 37.66],
-  [127.15, 37.61],
-  [127.18, 37.55],
-  [127.14, 37.49],
-  [127.06, 37.45],
-  [126.97, 37.43],
-  [126.88, 37.45],
-  [126.81, 37.49],
-  [126.77, 37.53],
-]
-
-export const SEOUL_OUTLINE: GeoJSON.Feature<GeoJSON.Polygon> = {
-  type: 'Feature',
-  properties: {},
-  geometry: {
-    type: 'Polygon',
-    coordinates: [[...SEOUL_RING, SEOUL_RING[0]]],
-  },
-}
-
-export const HAN_RIVER: GeoJSON.Feature<GeoJSON.LineString> = {
-  type: 'Feature',
-  properties: {},
-  geometry: {
-    type: 'LineString',
-    coordinates: [
-      [126.78, 37.58],
-      [126.84, 37.56],
-      [126.9, 37.54],
-      [126.96, 37.52],
-      [127.02, 37.52],
-      [127.08, 37.54],
-      [127.14, 37.56],
-    ],
-  },
-}
-
-/** 서울 전체가 들어가는 경위도 범위 — 미니맵 좌표 변환에 쓴다. */
-export const SEOUL_BBOX = {
-  minLng: 126.76,
-  maxLng: 127.19,
-  minLat: 37.42,
-  maxLat: 37.71,
-}
 
 /**
  * 지도 채색은 절대 전력량이 아니라 평시 대비 초과율을 따른다.
