@@ -4,6 +4,37 @@ import type { ChartTab, Settings } from '@/lib/nav'
 import type { MapController } from '@/components/map/MapView'
 import type { RiskLevel, ScenarioKey } from '@/lib/types'
 
+/** 지도 폴리곤 하나가 그려질 방식. 색은 서버 등급 색을 그대로 쓴다. */
+export interface MapDistrict {
+  code: string
+  name: string
+  variant: 'cool' | 'urban'
+  /** 마커에 찍을 문자열. 이미 완성된 형태로 넘긴다 */
+  headline: string
+  fillColor: string
+  fillOpacity: number
+  strokeColor: string
+  danger: boolean
+}
+
+/** 상단 기상 칩. 값이 없는 항목은 애초에 배열에 넣지 않는다. */
+export interface WeatherChip {
+  key: 'humidity' | 'wind' | 'riskDays' | 'pattern' | 'sdot'
+  label: string
+  value: string
+  emphasize?: boolean
+}
+
+export interface HeaderModel {
+  /** '2022.07.10' */
+  date: string
+  tMax: number | null
+  heatwave: boolean
+  chips: WeatherChip[]
+  /** 하단 스크러버 오른쪽 출처 표기 */
+  source: string
+}
+
 /** 차트가 무엇을 그릴지. 실측이 없으면 목데이터로 떨어진다. */
 export type ChartModel =
   | { mode: 'mock' }
@@ -58,6 +89,8 @@ export interface ViewProps {
   >
   cards: CardModel[]
   chart: ChartModel
+  mapDistricts: MapDistrict[]
+  header: HeaderModel
   /** 시나리오가 준비되지 않으면 토글을 잠근다 */
   scenarioNote: string | null
   mapRef: React.RefObject<MapController | null>

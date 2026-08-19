@@ -6,10 +6,7 @@ import { MicroclimateToggle } from '@/components/controls/MicroclimateToggle'
 import { ZoomControls } from '@/components/map/ZoomControls'
 import { MiniMap } from '@/components/map/MiniMap'
 import { cn } from '@/lib/cn'
-import { DISTRICTS, getExcessAt, getRiskLevel } from '@/lib/mock'
 import type { ViewProps } from './shared'
-
-const RISK_LABEL = { stable: '안정', caution: '주의', danger: '위험' } as const
 
 /**
  * 지도를 최대한 크게 쓰는 화면. 우측 레일과 차트를 걷어내고,
@@ -19,6 +16,8 @@ export function MapFocusView({
   scenario,
   onScenarioChange,
   scenarioNote,
+  header,
+  cards,
   hour,
   mapRef,
   viewport,
@@ -26,7 +25,7 @@ export function MapFocusView({
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-5">
       <div className="flex flex-wrap items-start gap-5">
-        <HeaderCard hour={hour} />
+        <HeaderCard hour={hour} header={header} />
         <MicroclimateToggle
           scenario={scenario}
           onChange={onScenarioChange}
@@ -60,37 +59,34 @@ export function MapFocusView({
         />
 
         <div className="flex items-end gap-5">
-          {DISTRICTS.map((district) => {
-            const excess = getExcessAt(district.code, scenario, hour)
-            const risk = getRiskLevel(excess)
-            return (
-              <Panel
-                key={district.code}
-                accent={district.variant}
-                tone={risk === 'danger' ? 'danger' : 'default'}
-                className="w-[196px]"
-              >
-                <div className="px-4 pb-4 pt-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[15px] font-semibold">
-                      {district.name}
-                    </span>
-                    <span className="text-[13px] text-faint">
-                      {RISK_LABEL[risk]}
-                    </span>
-                  </div>
-                  <div
-                    className={cn(
-                      'tnum mt-2 text-[40px] font-semibold leading-none tracking-[-0.02em] transition-colors duration-200',
-                      risk === 'danger' ? 'text-danger-text' : 'text-ink',
-                    )}
-                  >
-                    +{Math.round(excess)}%
-                  </div>
+          {cards.map((card) => (
+            <Panel
+              key={card.code}
+              accent={card.variant}
+              tone={card.risk === 'danger' ? 'danger' : 'default'}
+              className="w-[210px]"
+            >
+              <div className="px-4 pb-4 pt-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[15px] font-semibold">{card.name}</span>
+                  <span className="truncate text-[13px] text-faint">
+                    {card.grade}
+                  </span>
                 </div>
-              </Panel>
-            )
-          })}
+                <div
+                  className={cn(
+                    'tnum mt-2 text-[40px] font-semibold leading-none tracking-[-0.02em] transition-colors duration-200',
+                    card.risk === 'danger' ? 'text-danger-text' : 'text-ink',
+                  )}
+                >
+                  {card.headline}
+                </div>
+                <div className="mt-1 text-[13px] text-faint">
+                  {card.headlineLabel}
+                </div>
+              </div>
+            </Panel>
+          ))}
 
           <ZoomControls
             onZoomIn={() => mapRef.current?.zoomIn()}
