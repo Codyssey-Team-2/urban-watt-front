@@ -282,12 +282,15 @@ export default function Page() {
       </div>
 
       {/*
-        API를 붙여 놨는데 응답이 없으면 화면은 목데이터로 버틴다.
-        그 사실을 숨기면 시연 중 가짜 수치를 실측처럼 설명하게 된다.
+        실데이터가 아닐 때는 이유를 가리지 않고 항상 알린다.
+        주소 미설정과 서버 장애를 구분하지 않고 조용히 목데이터를 띄우면
+        시연 중 가짜 수치를 실측처럼 설명하게 된다.
       */}
-      {isApiEnabled() && dashboard.status === 'error' && (
+      {dashboard.status === 'error' && (
         <div className="pointer-events-auto absolute left-1/2 top-1.5 -translate-x-1/2 rounded-full bg-caution-light px-3 py-1 text-[13px] text-caution-text">
-          분석 서버 응답 없음 — 아래 수치는 시연용 목데이터입니다
+          {isApiEnabled()
+            ? '분석 서버 응답 없음'
+            : '분석 서버 주소 미설정'} — 아래 수치는 시연용 목데이터입니다
         </div>
       )}
 
