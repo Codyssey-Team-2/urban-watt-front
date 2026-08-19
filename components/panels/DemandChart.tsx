@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import {
   CartesianGrid,
   Line,
@@ -14,8 +14,9 @@ import {
 import { cn } from '@/lib/cn'
 import { CHANGSIN_CODE, JINGWAN_CODE, PEAK_HOUR, getForecast } from '@/lib/mock'
 import type { ScenarioKey } from '@/lib/types'
+import type { ChartTab } from '@/lib/nav'
 
-type TabKey = 'demand' | 'temp' | 'error'
+type TabKey = ChartTab
 
 const TABS: { key: TabKey; label: string; unit: string }[] = [
   { key: 'demand', label: '전력수요', unit: 'MW' },
@@ -81,10 +82,20 @@ const SERIES: Record<TabKey, Series[]> = {
 interface DemandChartProps {
   scenario: ScenarioKey
   hour: number
+  /** 탭은 뷰를 옮겨 다녀도 유지되어야 해서 바깥에서 들고 있는다. */
+  tab: TabKey
+  onTabChange: (tab: TabKey) => void
+  /** 마커 간격(시간). 설정에서 바꾼다. */
+  markerInterval?: number
 }
 
-export function DemandChart({ scenario, hour }: DemandChartProps) {
-  const [tab, setTab] = useState<TabKey>('demand')
+export function DemandChart({
+  scenario,
+  hour,
+  tab,
+  onTabChange,
+  markerInterval = 4,
+}: DemandChartProps) {
 
   const data = useMemo(() => {
     const j = getForecast(JINGWAN_CODE, scenario).hourly
@@ -126,7 +137,7 @@ export function DemandChart({ scenario, hour }: DemandChartProps) {
               key={t.key}
               role="tab"
               aria-selected={tab === t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => onTabChange(t.key)}
               className={cn(
                 'rounded-lg px-3 py-1 text-[13px] transition-colors duration-200',
                 tab === t.key
@@ -205,7 +216,13 @@ export function DemandChart({ scenario, hour }: DemandChartProps) {
                 activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }}
                 connectNulls={false}
                 isAnimationActive={false}
-                dot={<SeriesMarker shape={s.shape} color={s.color} />}
+                dot={
+                  <SeriesMarker
+                    shape={s.shape}
+                    color={s.color}
+                    interval={markerInterval}
+                  />
+                }
               />
             ))}
           </LineChart>
@@ -224,14 +241,15 @@ const round1 = (n: number) => Math.round(n * 10) / 10
 function SeriesMarker(props: {
   shape: MarkerShape
   color: string
+  interval: number
   cx?: number
   cy?: number
   index?: number
   value?: number | null
 }) {
-  const { shape, color, cx, cy, index, value } = props
+  const { shape, color, interval, cx, cy, index, value } = props
   if (shape === 'none' || cx == null || cy == null || value == null) return null
-  if (index == null || index % 4 !== 0) return null
+  if (index == null || index % interval !== 0) return null
 
   if (shape === 'circle') {
     return (

@@ -34,6 +34,9 @@ export interface MapController {
 
 interface MapViewProps {
   scenario: ScenarioKey
+  /** 뷰마다 패널이 가리는 영역이 달라 여백도 달라진다. */
+  padding?: { top: number; bottom: number; left: number; right: number }
+  showLabels?: boolean
   onReady?: (controller: MapController) => void
   onViewChange?: (viewport: Viewport) => void
 }
@@ -61,12 +64,24 @@ const BLANK_STYLE = {
   ],
 }
 
-export function MapView({ scenario, onReady, onViewChange }: MapViewProps) {
+export function MapView({
+  scenario,
+  padding = MAP_PADDING,
+  showLabels = true,
+  onReady,
+  onViewChange,
+}: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   // 라벨 마커는 지도가 준비된 뒤에 붙어야 한다. ref로 넘기면 React가 자식 effect를
   // 부모보다 먼저 실행해 항상 null을 보고, ref 변경은 재실행을 트리거하지 않는다.
   const [readyMap, setReadyMap] = useState<MapLibreMap | null>(null)
+  // 여백은 뷰 전환마다 바뀌지만 지도는 다시 만들지 않는다.
+  // 생성 effect가 최신 값을 읽도록 ref로만 흘려보낸다.
+  const paddingRef = useRef(padding)
+  useEffect(() => {
+    paddingRef.current = padding
+  }, [padding])
 
   // 지도 인스턴스는 한 번만 만든다. scenario는 아래 별도 effect에서 데이터만 갈아끼운다.
   useEffect(() => {
@@ -76,7 +91,7 @@ export function MapView({ scenario, onReady, onViewChange }: MapViewProps) {
       container: containerRef.current,
       style: BLANK_STYLE,
       bounds: DISTRICT_BOUNDS,
-      fitBoundsOptions: { padding: MAP_PADDING },
+      fitBoundsOptions: { padding: paddingRef.current },
       attributionControl: false,
       // 발표용이라 회전/기울기는 사고만 유발한다.
       pitchWithRotate: false,
@@ -168,7 +183,7 @@ export function MapView({ scenario, onReady, onViewChange }: MapViewProps) {
         zoomOut: () => map.zoomOut({ duration: 200 }),
         reset: () =>
           map.fitBounds(DISTRICT_BOUNDS, {
-            padding: MAP_PADDING,
+            padding: paddingRef.current,
             duration: 300,
           }),
       })
@@ -214,7 +229,7 @@ export function MapView({ scenario, onReady, onViewChange }: MapViewProps) {
           position:relative가 absolute를 덮어써서 inset-0이 높이를 만들지 못한다.
           위치가 아니라 크기로 채운다. */}
       <div ref={containerRef} className="size-full" />
-      <MapLabels scenario={scenario} map={readyMap} />
+      {showLabels && <MapLabels scenario={scenario} map={readyMap} />}
     </>
   )
 }

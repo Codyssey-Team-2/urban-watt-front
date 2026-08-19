@@ -3,6 +3,7 @@
 import type { ComponentType } from 'react'
 import { Panel } from './Panel'
 import { cn } from '@/lib/cn'
+import { NAV_SECTIONS, type ViewKey } from '@/lib/nav'
 import {
   ChartLineIcon,
   ChevronLeftIcon,
@@ -13,32 +14,21 @@ import {
   SettingsIcon,
 } from '@/components/ui/icons'
 
-interface NavItem {
-  label: string
-  icon: ComponentType<{ size?: number; className?: string }>
-}
+type IconComponent = ComponentType<{ size?: number; className?: string }>
 
-const SECTIONS: { title: string; items: NavItem[] }[] = [
-  {
-    title: '분석',
-    items: [
-      { label: '지역 비교', icon: CirclesIcon },
-      { label: '지도 보기', icon: MapIcon },
-      { label: '예측 그래프', icon: ChartLineIcon },
-    ],
-  },
-  {
-    title: '데이터',
-    items: [
-      { label: '데이터 정보', icon: DatabaseIcon },
-      { label: '설정', icon: SettingsIcon },
-    ],
-  },
-]
+const ICONS: Record<ViewKey, IconComponent> = {
+  comparison: CirclesIcon,
+  map: MapIcon,
+  chart: ChartLineIcon,
+  data: DatabaseIcon,
+  settings: SettingsIcon,
+}
 
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
+  activeView: ViewKey
+  onViewChange: (view: ViewKey) => void
 }
 
 /**
@@ -48,7 +38,12 @@ interface SidebarProps {
  * `wide:` 브레이크포인트로 처리한다 — 화면 폭을 JS로 읽으면 서버 렌더 결과와
  * 어긋나 hydration 불일치가 난다.
  */
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({
+  collapsed,
+  onToggle,
+  activeView,
+  onViewChange,
+}: SidebarProps) {
   // 접힘 상태에서는 라벨을 항상 숨기고, 펼침 상태여도 1600px 미만이면 숨긴다.
   const label = collapsed ? 'hidden' : 'hidden wide:block'
   const width = collapsed ? 'w-[72px]' : 'w-[72px] wide:w-[260px]'
@@ -60,7 +55,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         width,
       )}
     >
-      {/* 로고 */}
       <div className="flex items-center gap-2.5 border-b border-hair px-2 pb-3">
         <div className="flex size-9 flex-none items-center justify-center rounded-xl bg-brand text-white">
           <LeafIcon size={20} />
@@ -73,9 +67,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </div>
       </div>
 
-      {/* 네비 */}
       <nav className="mt-3 flex-1">
-        {SECTIONS.map((section) => (
+        {NAV_SECTIONS.map((section) => (
           <div key={section.title} className="mb-4">
             <div
               className={cn(
@@ -85,13 +78,16 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             >
               {section.title}
             </div>
-            {section.items.map(({ label: text, icon: Icon }, i) => {
-              const active = section.title === '분석' && i === 0
+            {section.items.map((item) => {
+              const Icon = ICONS[item.key]
+              const active = activeView === item.key
               return (
                 <button
-                  key={text}
+                  key={item.key}
                   type="button"
-                  title={text}
+                  title={item.label}
+                  aria-current={active ? 'page' : undefined}
+                  onClick={() => onViewChange(item.key)}
                   className={cn(
                     'mb-0.5 flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[15px] transition-colors duration-200',
                     collapsed && 'justify-center px-0',
@@ -107,7 +103,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                       active ? 'text-brand' : 'text-faint',
                     )}
                   />
-                  <span className={cn('truncate', label)}>{text}</span>
+                  <span className={cn('truncate', label)}>{item.label}</span>
                 </button>
               )
             })}
@@ -115,7 +111,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         ))}
       </nav>
 
-      {/* 프로필 + 접기 */}
       <div className="flex items-center gap-2.5 border-t border-hair px-2 pt-3">
         <div className="flex size-8 flex-none items-center justify-center rounded-full bg-brand-light text-[13px] font-semibold text-cool-deep">
           빈
