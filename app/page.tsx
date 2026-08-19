@@ -110,6 +110,11 @@ export default function Page() {
         <ActiveView {...viewProps} />
       </div>
 
+      {/* 지도 배경 출처. OSM 데이터(ODbL)는 표기 의무가 있다. */}
+      <p className="pointer-events-none absolute bottom-1 left-1/2 -translate-x-1/2 text-[13px] text-faint/70">
+        경계 southkorea/seoul-maps · 한강 © OpenStreetMap contributors
+      </p>
+
       {/* 브리핑 3상태 검수용 — 백엔드 연동 시 제거된다 */}
       <button
         type="button"

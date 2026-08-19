@@ -119,7 +119,13 @@ export function DemandChart({
     }))
   }, [scenario])
 
-  const active = SERIES[tab]
+  // 기상만 상태에서는 실선 자체가 기상만 예측이라 유령 기준선이 중복이다.
+  // 그릴 선이 없는데 범례만 남으면 읽는 사람이 선을 찾게 된다.
+  const active = useMemo(
+    () =>
+      SERIES[tab].filter((s) => !(s.key === 'guroBase' && scenario === 'b')),
+    [tab, scenario],
+  )
   const unit = TABS.find((t) => t.key === tab)!.unit
   const axis = Y_AXIS[tab]
 
@@ -215,6 +221,8 @@ export function DemandChart({
                 strokeDasharray={s.dashed ? '5 4' : undefined}
                 activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }}
                 connectNulls={false}
+                // 곡선 애니메이션은 끈다. 시간대 재생 중 매 프레임 다시 그려지면
+                // 선이 끊긴 것처럼 보인다. 토글 전환은 지도와 카드가 표현한다.
                 isAnimationActive={false}
                 dot={
                   <SeriesMarker

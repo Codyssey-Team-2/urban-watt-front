@@ -1,7 +1,7 @@
 'use client'
 
 import { Panel } from '@/components/layout/Panel'
-import { DISTRICTS, SEOUL_BBOX, SEOUL_OUTLINE } from '@/lib/mock'
+import { DISTRICTS, HAN_RIVER, SEOUL_BBOX, SEOUL_OUTLINE } from '@/lib/mock'
 import type { Viewport } from './MapView'
 
 const W = 208
@@ -43,6 +43,7 @@ interface MiniMapProps {
 
 export function MiniMap({ viewport, className }: MiniMapProps) {
   const seoulPath = outlinePath(SEOUL_OUTLINE.geometry)
+  const hanPath = outlinePath(HAN_RIVER.geometry)
 
   // 현재 지도 범위 상자. 서울 밖으로 벗어나면 미니맵 안에서 잘라 보여준다.
   let box: { x: number; y: number; w: number; h: number } | null = null
@@ -78,6 +79,7 @@ export function MiniMap({ viewport, className }: MiniMapProps) {
           strokeWidth={1}
           fillRule="evenodd"
         />
+        <path d={hanPath} fill="#D6E8F2" fillRule="evenodd" />
         {box && (
           <rect
             x={box.x}
