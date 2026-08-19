@@ -10,15 +10,16 @@ const MODEL_NOTE: Record<ModelKey, string> = {
 
 interface ModelPerfCardProps {
   mape: Record<ModelKey, number>
+  className?: string
 }
 
-export function ModelPerfCard({ mape }: ModelPerfCardProps) {
+export function ModelPerfCard({ mape, className }: ModelPerfCardProps) {
   const worst = Math.max(mape.a, mape.b, mape.c)
   // B(기상만) 대비 C(미기후)가 얼마나 줄었는지 — 이 프로젝트의 주장 그 자체다.
   const improvement = Math.round(((mape.b - mape.c) / mape.b) * 100)
 
   return (
-    <Panel className="px-5 py-4">
+    <Panel className={cn('px-5 py-4', className)}>
       <div className="flex items-center justify-between">
         <span className="text-[13px] font-semibold text-muted">
           모델 성능 · MAPE

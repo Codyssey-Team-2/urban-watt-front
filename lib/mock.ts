@@ -80,6 +80,23 @@ const RESIDUAL = [
   0.8, -0.7, 0.9, 0.5, -0.8, 0.6, -0.4, 0.3, -0.5, 0.4, -0.3, 0.2,
 ]
 
+// 2023-08-05 기온 곡선. 새벽 5시 최저 26.8°C, 15시 최고 35.4°C.
+const TEMP_SHAPE = [
+  0.22, 0.14, 0.08, 0.03, 0.0, 0.02, 0.12, 0.27, 0.44, 0.6, 0.73, 0.83,
+  0.9, 0.96, 0.99, 1.0, 0.97, 0.91, 0.82, 0.71, 0.59, 0.47, 0.37, 0.29,
+]
+const ASOS_MIN = 26.8
+const ASOS_MAX = 35.4
+
+/**
+ * S-DoT 실측과 대표 기상의 격차. 낮 동안 벌어지고 새벽엔 좁혀진다.
+ * 창신동은 불투수면 축열로 더 뜨겁고, 진관동은 녹지 증발산으로 더 시원하다.
+ */
+const SDOT_OFFSET: Record<string, { day: number; night: number }> = {
+  [JINGWAN_CODE]: { day: -1.1, night: -0.3 },
+  [CHANGSIN_CODE]: { day: 2.4, night: 0.7 },
+}
+
 interface CurveSpec {
   shape: number[]
   /** 평시(비폭염일) 피크 수요 MW */
@@ -122,13 +139,21 @@ function buildHourly(code: string): HourlyPoint[] {
   const spec = CURVES[code]
   const b = buildCurve(spec, 'b')
   const c = buildCurve(spec, 'c')
-  return spec.shape.map((_, hour) => ({
-    hour,
-    // 기준 시각(15시) 이후는 아직 관측되지 않았다.
-    actual: hour <= CURRENT_HOUR ? round1(c[hour] + RESIDUAL[hour]) : null,
-    modelB: b[hour],
-    modelC: c[hour],
-  }))
+  const offset = SDOT_OFFSET[code]
+  return spec.shape.map((_, hour) => {
+    const t = TEMP_SHAPE[hour]
+    const asos = round1(ASOS_MIN + (ASOS_MAX - ASOS_MIN) * t)
+    const gap = offset.night + (offset.day - offset.night) * t
+    return {
+      hour,
+      // 기준 시각(15시) 이후는 아직 관측되지 않았다.
+      actual: hour <= CURRENT_HOUR ? round1(c[hour] + RESIDUAL[hour]) : null,
+      modelB: b[hour],
+      modelC: c[hour],
+      asos,
+      sdot: round1(asos + gap),
+    }
+  })
 }
 
 // ── 예측 ────────────────────────────────────────────────────────────────

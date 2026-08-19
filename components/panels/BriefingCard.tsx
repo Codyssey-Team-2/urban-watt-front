@@ -1,6 +1,7 @@
 'use client'
 
 import { Panel } from '@/components/layout/Panel'
+import { cn } from '@/lib/cn'
 import { AlertIcon, RefreshIcon, SparklesIcon } from '@/components/ui/icons'
 import type { Briefing } from '@/lib/types'
 
@@ -18,6 +19,7 @@ interface BriefingCardProps {
   state: BriefingState
   source?: string
   onRetry?: () => void
+  className?: string
 }
 
 function Skeleton({ width }: { width: string }) {
@@ -33,9 +35,10 @@ export function BriefingCard({
   state,
   source = 'Gemini',
   onRetry,
+  className,
 }: BriefingCardProps) {
   return (
-    <Panel className="px-5 py-4">
+    <Panel className={cn('px-5 py-4', className)}>
       <div className="flex items-center gap-2">
         <SparklesIcon size={16} className="flex-none text-brand" />
         <span className="text-[13px] font-semibold text-muted">AI 브리핑</span>

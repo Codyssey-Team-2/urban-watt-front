@@ -23,6 +23,8 @@ export interface HourlyPoint {
   actual: number | null
   modelB: number // 기상만
   modelC: number // 미기후 반영
+  asos: number // 서울 대표 기상 기온 °C (전 지역 공통)
+  sdot: number // 해당 지역 S-DoT 실측 기온 °C
 }
 
 export interface Forecast {
