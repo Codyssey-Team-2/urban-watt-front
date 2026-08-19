@@ -34,7 +34,8 @@ function Stat({
       <div
         className={cn(
           'tnum mt-0.5 text-[15px] leading-tight',
-          emphasize ? 'font-semibold text-urban-text' : 'text-ink',
+          // 강조는 굵기로만 한다. 색은 상태 신호로 아껴 둔다.
+          emphasize ? 'font-semibold text-ink' : 'text-ink',
         )}
       >
         {value}
@@ -79,12 +80,10 @@ export function DistrictCard({
           <span
             className={cn(
               'tnum text-[40px] font-semibold leading-none tracking-[-0.02em] transition-colors duration-200',
-              // 평소에는 지역 정체성 색, 위험 상태에서만 빨강으로 바뀐다.
-              risk === 'danger'
-                ? 'text-danger-text'
-                : urban
-                  ? 'text-urban-text'
-                  : 'text-ink',
+              // 평소에는 검정. 위험 상태에서만 빨강이 나온다.
+              // 지역 구분은 상단 컬러바와 지도가 이미 하고 있어서
+              // 숫자까지 색을 입히면 상태 신호가 묻힌다.
+              risk === 'danger' ? 'text-danger-text' : 'text-ink',
             )}
           >
             +{Math.round(excess)}%
