@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Panel } from '@/components/layout/Panel'
 import { HeaderCard } from '@/components/controls/HeaderCard'
@@ -15,7 +16,8 @@ import {
   type BriefingState,
 } from '@/components/panels/BriefingCard'
 import { ZoomControls } from '@/components/map/ZoomControls'
-import { cn } from '@/lib/cn'
+import { MiniMap } from '@/components/map/MiniMap'
+import type { MapController, Viewport } from '@/components/map/MapView'
 import {
   BRIEFINGS,
   CURRENT_HOUR,
@@ -25,36 +27,23 @@ import {
 } from '@/lib/mock'
 import type { ScenarioKey } from '@/lib/types'
 
-/** 아직 구현되지 않은 자리. Phase 5에서 지도 컴포넌트로 교체된다. */
-function Slot({
-  label,
-  phase,
-  className,
-}: {
-  label: string
-  phase: string
-  className?: string
-}) {
-  return (
-    <Panel
-      className={cn(
-        'flex items-center justify-center border-dashed p-4 text-center',
-        className,
-      )}
-    >
-      <div>
-        <div className="text-[15px] font-semibold text-muted">{label}</div>
-        <div className="tnum mt-0.5 text-[13px] text-faint">{phase}</div>
-      </div>
-    </Panel>
-  )
-}
+// MapLibre는 window/WebGL을 요구해 서버에서 렌더할 수 없다.
+const MapView = dynamic(
+  () => import('@/components/map/MapView').then((m) => m.MapView),
+  { ssr: false },
+)
 
 export default function Page() {
   const [scenario, setScenario] = useState<ScenarioKey>('c')
   const [hour, setHour] = useState(CURRENT_HOUR)
   const [playing, setPlaying] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [viewport, setViewport] = useState<Viewport | null>(null)
+  const mapRef = useRef<MapController | null>(null)
+
+  const handleMapReady = useCallback((controller: MapController) => {
+    mapRef.current = controller
+  }, [])
 
   // Phase 3 검수용 — 백엔드 연동 시 실제 fetch 상태로 대체된다.
   const [briefingStatus, setBriefingStatus] =
@@ -68,8 +57,14 @@ export default function Page() {
 
   return (
     <div className="relative size-full">
-      {/* 지도는 화면을 꽉 채우는 배경. Phase 5에서 MapView로 교체된다. */}
-      <div className="absolute inset-0 bg-mapbase" />
+      {/* 지도는 화면을 꽉 채우는 배경 */}
+      <div className="absolute inset-0 bg-mapbase">
+        <MapView
+          scenario={scenario}
+          onReady={handleMapReady}
+          onViewChange={setViewport}
+        />
+      </div>
 
       {/* 패널은 지도 위에 떠 있다. 폭이 줄면 겹치므로 절대위치가 아니라 flex로 짠다. */}
       <div className="absolute inset-0 flex gap-5 p-6">
@@ -90,10 +85,9 @@ export default function Page() {
 
           <div className="flex min-w-0 gap-5">
             {/* 1280px 미만에서는 미니맵을 숨긴다 */}
-            <Slot
-              label="미니맵"
-              phase="MiniMap · Phase 5"
-              className="hidden h-[218px] w-[240px] flex-none self-end xl:flex"
+            <MiniMap
+              viewport={viewport}
+              className="hidden w-[240px] flex-none self-end xl:block"
             />
             {/* 차트는 218px면 그림 영역이 60px밖에 안 남아 두 동의 기울기 차이가
                 묻힌다. 이 데모의 핵심이므로 미니맵보다 높게 잡는다. */}
@@ -140,9 +134,9 @@ export default function Page() {
           <div className="min-h-5 flex-1" />
 
           <ZoomControls
-            onZoomIn={() => {}}
-            onZoomOut={() => {}}
-            onReset={() => {}}
+            onZoomIn={() => mapRef.current?.zoomIn()}
+            onZoomOut={() => mapRef.current?.zoomOut()}
+            onReset={() => mapRef.current?.reset()}
           />
         </aside>
       </div>

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // prebuild가 node_modules에서 복사해 오는 MapLibre 워커 번들
+    "public/maplibre/**",
   ]),
 ]);
 
