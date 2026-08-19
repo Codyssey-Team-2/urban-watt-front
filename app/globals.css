@@ -45,6 +45,10 @@
   --breakpoint-wide: 1600px;
 }
 
+/* 세로가 짧은 화면(노트북)에서 우측 레일이 넘치지 않도록 여백만 좁힌다.
+   Tailwind 브레이크포인트는 가로폭 전용이라 변형을 직접 정의한다. */
+@custom-variant short (@media (max-height: 940px));
+
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

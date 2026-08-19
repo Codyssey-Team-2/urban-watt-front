@@ -41,10 +41,12 @@ export const DISTRICTS: District[] = [
     variant: 'warm',
     center: [126.8847, 37.4942],
     microclimate: {
-      vegetationRate: 13,
-      imperviousRate: 83,
-      balancePoint: 22.3,
-      coolingSlope: 1.8,
+      // 준공업지역과 아파트 단지가 섞여 있고 안양천을 끼고 있어,
+      // 저층 고밀 주거지보다는 녹지 비율이 조금 높다.
+      vegetationRate: 20,
+      imperviousRate: 76,
+      balancePoint: 23.1,
+      coolingSlope: 1.6,
     },
   },
 ]
@@ -66,7 +68,7 @@ export const WEATHER: WeatherSnapshot = {
 // ── 시간대별 수요 곡선 ──────────────────────────────────────────────────
 //
 // 새벽 저점 → 15시 피크 → 야간 하강.
-// 구로동은 오전엔 완만하다가 11~15시에 급격히 꺾인다 (불투수 83%, 기울기 1.8x).
+// 구로동은 오전엔 완만하다가 11~15시에 급격히 꺾인다 (불투수 76%, 기울기 1.6x).
 
 const COOL_SHAPE = [
   0.30, 0.27, 0.25, 0.24, 0.24, 0.26, 0.31, 0.38, 0.46, 0.55, 0.64, 0.72,
@@ -206,27 +208,41 @@ export const getMetrics = (code: string): Metrics =>
 
 // ── AI 브리핑 ───────────────────────────────────────────────────────────
 
-export const BRIEFINGS: Record<ScenarioKey, Briefing> = {
-  b: {
-    summary:
-      '서울 대표 기상(ASOS)만으로는 두 지역이 같은 35.4°C를 겪은 것으로 계산됩니다. 구로동 피크는 평시 대비 +28%로 예측됩니다.',
-    evidence: [
-      '두 지역에 동일한 관측값이 적용됨',
-      '지역 간 예측 격차는 건물 용도 구성에서만 발생',
-    ],
-    caveat: '실측 미기후가 반영되지 않아 도심 밀집지의 피크가 과소추정될 수 있습니다.',
-  },
-  c: {
-    summary:
-      '구로동은 진관동보다 2.8°C 낮은 기온에서 냉방이 시작되며, 동일 기온에서 수요 증가 기울기가 1.8배로 관측됩니다. 피크는 평시 대비 +47%까지 올라갑니다.',
-    evidence: [
-      'S-DoT 실측이 ASOS 대비 +2.4°C 높음',
-      '불투수피복률 83% vs 35%, 식생피복률 13% vs 58%',
-      '냉방 균형점 22.3°C vs 25.1°C',
-    ],
-    caveat: '단일 폭염일(2023-08-05) 기준이며, 계절 전체로 일반화하기에는 표본이 부족합니다.',
-  },
+/**
+ * 브리핑 문구는 지표에서 계산한다. 하드코딩하면 목데이터를 손볼 때마다
+ * 화면의 설명과 숫자가 조용히 어긋난다.
+ */
+function buildBriefings(): Record<ScenarioKey, Briefing> {
+  const cool = getDistrict(JINGWAN_CODE)
+  const warm = getDistrict(GURO_CODE)
+  const balanceGap = round1(
+    cool.microclimate.balancePoint - warm.microclimate.balancePoint,
+  )
+  const { excess } = CURVES[warm.code]
+
+  return {
+    b: {
+      summary: `서울 대표 기상(ASOS)만으로는 두 지역이 같은 ${WEATHER.asosTemp}°C를 겪은 것으로 계산됩니다. ${warm.name} 피크는 평시 대비 +${excess.b}%로 예측됩니다.`,
+      evidence: [
+        '두 지역에 동일한 관측값이 적용됨',
+        '지역 간 예측 격차는 건물 용도 구성에서만 발생',
+      ],
+      caveat:
+        '실측 미기후가 반영되지 않아 도심 밀집지의 피크가 과소추정될 수 있습니다.',
+    },
+    c: {
+      summary: `${warm.name}은 ${cool.name}보다 ${balanceGap.toFixed(1)}°C 낮은 기온에서 냉방이 시작되며, 동일 기온에서 수요 증가 기울기가 ${warm.microclimate.coolingSlope.toFixed(1)}배로 관측됩니다. 피크는 평시 대비 +${excess.c}%까지 올라갑니다.`,
+      evidence: [
+        `S-DoT 실측이 ASOS 대비 +${WEATHER.sdotGap}°C 높음`,
+        `불투수피복률 ${warm.microclimate.imperviousRate}% vs ${cool.microclimate.imperviousRate}%, 식생피복률 ${warm.microclimate.vegetationRate}% vs ${cool.microclimate.vegetationRate}%`,
+        `냉방 균형점 ${warm.microclimate.balancePoint.toFixed(1)}°C vs ${cool.microclimate.balancePoint.toFixed(1)}°C`,
+      ],
+      caveat: `단일 폭염일(${DEMO_DATE}) 기준이며, 계절 전체로 일반화하기에는 표본이 부족합니다.`,
+    },
+  }
 }
+
+export const BRIEFINGS = buildBriefings()
 
 // ── 서울 실제 경계 ──────────────────────────────────────────────────────
 //

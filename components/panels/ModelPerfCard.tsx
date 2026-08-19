@@ -19,7 +19,7 @@ export function ModelPerfCard({ mape, className }: ModelPerfCardProps) {
   const improvement = Math.round(((mape.b - mape.c) / mape.b) * 100)
 
   return (
-    <Panel className={cn('px-5 py-4', className)}>
+    <Panel className={cn('px-5 py-4 short:py-3', className)}>
       <div className="flex items-center justify-between">
         <span className="text-[13px] font-semibold text-muted">
           모델 성능 · MAPE
