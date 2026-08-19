@@ -8,7 +8,7 @@ import { TimeScrubber } from '@/components/controls/TimeScrubber'
 import { DemandChart } from '@/components/panels/DemandChart'
 import { ModelPerfCard } from '@/components/panels/ModelPerfCard'
 import { cn } from '@/lib/cn'
-import { CHANGSIN_CODE, DISTRICTS, OVERALL_MAPE, getForecast } from '@/lib/mock'
+import { GURO_CODE, DISTRICTS, OVERALL_MAPE, getForecast } from '@/lib/mock'
 import { PLAYBACK_SPEED } from '@/lib/nav'
 import type { ViewProps } from './shared'
 
@@ -24,7 +24,7 @@ export function ChartFocusView({
   onChartTabChange,
   settings,
 }: ViewProps) {
-  const changsin = getForecast(CHANGSIN_CODE, scenario).hourly[hour]
+  const guro = getForecast(GURO_CODE, scenario).hourly[hour]
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-5">
@@ -107,8 +107,8 @@ export function ChartFocusView({
       </div>
 
       <div className="text-[13px] text-faint">
-        {String(hour).padStart(2, '0')}시 기준 · 창신동 S-DoT 실측은 대표기상보다{' '}
-        {(changsin.sdot - changsin.asos).toFixed(1)}°C 높습니다.
+        {String(hour).padStart(2, '0')}시 기준 · 구로동 S-DoT 실측은 대표기상보다{' '}
+        {(guro.sdot - guro.asos).toFixed(1)}°C 높습니다.
       </div>
     </div>
   )

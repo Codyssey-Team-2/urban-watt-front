@@ -1,12 +1,7 @@
 'use client'
 
 import { Panel } from '@/components/layout/Panel'
-import {
-  DISTRICTS,
-  HAN_RIVER,
-  SEOUL_BBOX,
-  SEOUL_OUTLINE,
-} from '@/lib/mock'
+import { DISTRICTS, SEOUL_BBOX, SEOUL_OUTLINE } from '@/lib/mock'
 import type { Viewport } from './MapView'
 
 const W = 208
@@ -21,13 +16,22 @@ function project([lng, lat]: [number, number]): [number, number] {
   ]
 }
 
-const toPath = (coords: number[][]) =>
-  coords
+const ringToPath = (ring: number[][]) =>
+  ring
     .map((c, i) => {
       const [x, y] = project(c as [number, number])
       return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`
     })
-    .join(' ')
+    .join(' ') + ' Z'
+
+/** 서울 경계는 한강 하중도 등으로 MultiPolygon이라 링을 모두 그려야 한다. */
+function outlinePath(geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon) {
+  const rings =
+    geometry.type === 'Polygon'
+      ? geometry.coordinates
+      : geometry.coordinates.flat()
+  return rings.map((r) => ringToPath(r as number[][])).join(' ')
+}
 
 const clamp = (v: number, min: number, max: number) =>
   Math.min(Math.max(v, min), max)
@@ -38,8 +42,7 @@ interface MiniMapProps {
 }
 
 export function MiniMap({ viewport, className }: MiniMapProps) {
-  const seoulPath = `${toPath(SEOUL_OUTLINE.geometry.coordinates[0])} Z`
-  const hanPath = toPath(HAN_RIVER.geometry.coordinates)
+  const seoulPath = outlinePath(SEOUL_OUTLINE.geometry)
 
   // 현재 지도 범위 상자. 서울 밖으로 벗어나면 미니맵 안에서 잘라 보여준다.
   let box: { x: number; y: number; w: number; h: number } | null = null
@@ -66,10 +69,15 @@ export function MiniMap({ viewport, className }: MiniMapProps) {
         viewBox={`0 0 ${W} ${H}`}
         className="block h-auto w-full px-2"
         role="img"
-        aria-label="서울시 안에서 진관동과 창신동의 위치, 그리고 현재 지도 범위"
+        aria-label="서울시 안에서 진관동과 구로동의 위치, 그리고 현재 지도 범위"
       >
-        <path d={seoulPath} fill="#E1EBDF" stroke="#C4D3C3" strokeWidth={1} />
-        <path d={hanPath} fill="none" stroke="#DCEAF2" strokeWidth={3} />
+        <path
+          d={seoulPath}
+          fill="#E1EBDF"
+          stroke="#C4D3C3"
+          strokeWidth={1}
+          fillRule="evenodd"
+        />
         {box && (
           <rect
             x={box.x}
