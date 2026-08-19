@@ -6,7 +6,7 @@ import { MicroclimateToggle } from '@/components/controls/MicroclimateToggle'
 import { ZoomControls } from '@/components/map/ZoomControls'
 import { MiniMap } from '@/components/map/MiniMap'
 import { cn } from '@/lib/cn'
-import { DISTRICTS, getForecast } from '@/lib/mock'
+import { DISTRICTS, getExcessAt, getRiskLevel } from '@/lib/mock'
 import type { ViewProps } from './shared'
 
 const RISK_LABEL = { stable: '안정', caution: '주의', danger: '위험' } as const
@@ -56,13 +56,14 @@ export function MapFocusView({
 
         <div className="flex items-end gap-5">
           {DISTRICTS.map((district) => {
-            const forecast = getForecast(district.code, scenario)
+            const excess = getExcessAt(district.code, scenario, hour)
+            const risk = getRiskLevel(excess)
             const warm = district.variant === 'warm'
             return (
               <Panel
                 key={district.code}
                 accent={district.variant}
-                tone={warm && forecast.riskLevel === 'danger' ? 'warm' : 'default'}
+                tone={warm && risk === 'danger' ? 'warm' : 'default'}
                 className="w-[196px]"
               >
                 <div className="px-4 pb-4 pt-3">
@@ -71,7 +72,7 @@ export function MapFocusView({
                       {district.name}
                     </span>
                     <span className="text-[13px] text-faint">
-                      {RISK_LABEL[forecast.riskLevel]}
+                      {RISK_LABEL[risk]}
                     </span>
                   </div>
                   <div
@@ -80,7 +81,7 @@ export function MapFocusView({
                       warm ? 'text-warm-text' : 'text-ink',
                     )}
                   >
-                    +{forecast.excessRate}%
+                    +{Math.round(excess)}%
                   </div>
                 </div>
               </Panel>

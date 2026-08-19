@@ -1,3 +1,4 @@
+import type { Dispatch, SetStateAction } from 'react'
 import type { BriefingState } from '@/components/panels/BriefingCard'
 import type { ChartTab, Settings } from '@/lib/nav'
 import type { MapController } from '@/components/map/MapView'
@@ -8,7 +9,7 @@ export interface ViewProps {
   scenario: ScenarioKey
   onScenarioChange: (scenario: ScenarioKey) => void
   hour: number
-  onHourChange: (hour: number) => void
+  onHourChange: Dispatch<SetStateAction<number>>
   playing: boolean
   onPlayingChange: (playing: boolean) => void
   chartTab: ChartTab

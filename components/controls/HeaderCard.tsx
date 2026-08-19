@@ -20,7 +20,8 @@ export function HeaderCard({ hour }: HeaderCardProps) {
         )}
       </div>
       <div className="tnum mt-1 text-[13px] text-faint">
-        {date} · {String(hour).padStart(2, '0')}:00 KST
+        {date} · {String(Math.floor(hour)).padStart(2, '0')}:
+        {String(Math.floor((hour % 1) * 60)).padStart(2, '0')} KST
       </div>
     </Panel>
   )

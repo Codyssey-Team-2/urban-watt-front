@@ -132,13 +132,83 @@ const CURVES: Record<string, CurveSpec> = {
 
 const round1 = (n: number) => Math.round(n * 10) / 10
 
-function buildCurve(spec: CurveSpec, scenario: ScenarioKey): number[] {
-  const peak = spec.normalPeak * (1 + spec.excess[scenario] / 100)
+/**
+ * 곡선 형태를 0~1로 정규화한 값. 0이면 심야 저점, 1이면 피크.
+ *
+ * 원본 데이터는 정시 단위지만 재생할 때 값이 한 시간씩 뚝뚝 끊기면
+ * 지도 색과 숫자가 계단처럼 튄다. 정시 사이는 선형 보간해 이어 준다.
+ */
+function shapeAt(spec: CurveSpec, hour: number): number {
   const min = Math.min(...spec.shape)
-  return spec.shape.map((s) => {
-    const t = (s - min) / (1 - min)
-    return round1(spec.trough + (peak - spec.trough) * t)
-  })
+  const t = clampHour(hour)
+  const i = Math.floor(t)
+  const next = spec.shape[(i + 1) % 24]
+  const value = spec.shape[i] + (next - spec.shape[i]) * (t - i)
+  return (value - min) / (1 - min)
+}
+
+/** 0 이상 24 미만으로 감아 준다. 재생이 23시를 넘어가면 0시로 이어진다. */
+export const clampHour = (hour: number) => ((hour % 24) + 24) % 24
+
+const curveValue = (spec: CurveSpec, peak: number, hour: number) =>
+  spec.trough + (peak - spec.trough) * shapeAt(spec, hour)
+
+const peakOf = (spec: CurveSpec, scenario: ScenarioKey) =>
+  spec.normalPeak * (1 + spec.excess[scenario] / 100)
+
+function buildCurve(spec: CurveSpec, scenario: ScenarioKey): number[] {
+  const peak = peakOf(spec, scenario)
+  return spec.shape.map((_, hour) => round1(curveValue(spec, peak, hour)))
+}
+
+/**
+ * 선택 시각의 평시 대비 초과율.
+ *
+ * 심야에는 냉방 부하가 없어 폭염일과 평시가 거의 같고, 낮이 될수록 벌어져
+ * 피크(15시)에서 최대가 된다. 지도 채색이 시간에 따라 살아 움직여야 하므로
+ * 하루 단위 고정값이 아니라 시각별로 계산한다.
+ */
+export function getExcessAt(
+  code: string,
+  scenario: ScenarioKey,
+  hour: number,
+): number {
+  const spec = CURVES[code]
+  const predicted = curveValue(spec, peakOf(spec, scenario), hour)
+  const normal = curveValue(spec, spec.normalPeak, hour)
+  return round1((predicted / normal - 1) * 100)
+}
+
+/** 선택 시각의 예측 수요 MW. 정시 사이는 보간된다. */
+export function getDemandAt(
+  code: string,
+  scenario: ScenarioKey,
+  hour: number,
+): number {
+  const spec = CURVES[code]
+  return round1(curveValue(spec, peakOf(spec, scenario), hour))
+}
+
+/** 선택 시각의 기온. 대표기상과 해당 지역 S-DoT 실측. */
+export function getTempAt(code: string, hour: number) {
+  const t = clampHour(hour)
+  const i = Math.floor(t)
+  const f = t - i
+  const lerp = (a: number, b: number) => round1(a + (b - a) * f)
+  const series = getForecast(code, 'c').hourly
+  const cur = series[i]
+  const next = series[(i + 1) % 24]
+  return { asos: lerp(cur.asos, next.asos), sdot: lerp(cur.sdot, next.sdot) }
+}
+
+/**
+ * 초과율 구간으로 위험도를 정한다. 피크 시각에서 진관동 +15% = 안정,
+ * 구로동 +28%(기상만) = 주의, +47%(미기후) = 위험이 되도록 잡았다.
+ */
+export function getRiskLevel(excess: number): Forecast['riskLevel'] {
+  if (excess >= 40) return 'danger'
+  if (excess >= 20) return 'caution'
+  return 'stable'
 }
 
 function buildHourly(code: string): HourlyPoint[] {
@@ -164,11 +234,6 @@ function buildHourly(code: string): HourlyPoint[] {
 
 // ── 예측 ────────────────────────────────────────────────────────────────
 
-const RISK: Record<string, Record<ScenarioKey, Forecast['riskLevel']>> = {
-  [JINGWAN_CODE]: { b: 'stable', c: 'stable' },
-  [GURO_CODE]: { b: 'caution', c: 'danger' },
-}
-
 export function getForecast(code: string, scenario: ScenarioKey): Forecast {
   return {
     districtCode: code,
@@ -176,7 +241,7 @@ export function getForecast(code: string, scenario: ScenarioKey): Forecast {
     hourly: buildHourly(code),
     peakHour: PEAK_HOUR,
     excessRate: CURVES[code].excess[scenario],
-    riskLevel: RISK[code][scenario],
+    riskLevel: getRiskLevel(CURVES[code].excess[scenario]),
   }
 }
 
@@ -311,11 +376,11 @@ export const MAP_PADDING = { top: 110, bottom: 340, left: 330, right: 460 }
  * 지도 채색은 절대 전력량이 아니라 평시 대비 초과율을 따른다.
  * 절대량으로 칠하면 수요가 큰 지역이 무조건 붉게 나와 미기후 주장이 사라진다.
  */
-export function districtFeatures(scenario: ScenarioKey) {
+export function districtFeatures(scenario: ScenarioKey, hour: number) {
   return {
     type: 'FeatureCollection' as const,
     features: DISTRICTS.map((d) => {
-      const forecast = getForecast(d.code, scenario)
+      const excess = getExcessAt(d.code, scenario, hour)
       const source = DISTRICT_GEOJSON.features.find(
         (f) => f.properties.code === d.code,
       )!
@@ -325,8 +390,8 @@ export function districtFeatures(scenario: ScenarioKey) {
           code: d.code,
           name: d.name,
           variant: d.variant,
-          excess: forecast.excessRate,
-          risk: forecast.riskLevel,
+          excess,
+          risk: getRiskLevel(excess),
         },
         geometry: source.geometry,
       }

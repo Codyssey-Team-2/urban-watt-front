@@ -1,6 +1,6 @@
 import { Panel } from '@/components/layout/Panel'
 import { cn } from '@/lib/cn'
-import type { District, Forecast, RiskLevel } from '@/lib/types'
+import type { District, RiskLevel } from '@/lib/types'
 
 const RISK: Record<RiskLevel, { label: string; className: string }> = {
   stable: { label: '안정', className: 'bg-brand-light text-brand-dark' },
@@ -10,7 +10,9 @@ const RISK: Record<RiskLevel, { label: string; className: string }> = {
 
 interface DistrictCardProps {
   district: District
-  forecast: Forecast
+  /** 선택 시각의 평시 대비 초과율 (%) */
+  excess: number
+  risk: RiskLevel
   /** 선택 시각의 예측 수요 MW */
   demand: number
   className?: string
@@ -42,17 +44,18 @@ function Stat({
 
 export function DistrictCard({
   district,
-  forecast,
+  excess,
+  risk,
   demand,
   className,
 }: DistrictCardProps) {
   const warm = district.variant === 'warm'
-  const risk = RISK[forecast.riskLevel]
+  const riskStyle = RISK[risk]
   const { balancePoint, coolingSlope, vegetationRate } = district.microclimate
 
   return (
     <Panel
-      tone={warm && forecast.riskLevel === 'danger' ? 'warm' : 'default'}
+      tone={warm && risk === 'danger' ? 'warm' : 'default'}
       accent={district.variant}
       className={cn('transition-colors duration-200', className)}
     >
@@ -64,10 +67,10 @@ export function DistrictCard({
           <span
             className={cn(
               'rounded-full px-2.5 py-0.5 text-[13px] font-semibold transition-colors duration-200',
-              risk.className,
+              riskStyle.className,
             )}
           >
-            {risk.label}
+            {riskStyle.label}
           </span>
         </div>
 
@@ -78,7 +81,7 @@ export function DistrictCard({
               warm ? 'text-warm-text' : 'text-ink',
             )}
           >
-            +{forecast.excessRate}%
+            +{Math.round(excess)}%
           </span>
           <span className="text-[13px] text-faint">평시 대비</span>
         </div>
