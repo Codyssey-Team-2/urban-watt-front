@@ -7,8 +7,10 @@ import { DEMO_DATE, DONG_CODE } from './types'
 import type {
   BriefingResponse,
   CompareResponse,
+  DongsGeoJson,
   MetaDong,
   MetaResponse,
+  ScenarioName,
 } from './types'
 
 /** 지역 고정 색. 서버 등급 색과 달리 시각에 따라 바뀌지 않는다. */
@@ -25,6 +27,8 @@ export interface DashboardData {
   /** 시계열이 준비된 동만 들어 있다 */
   days: Record<string, DayView>
   compare: CompareResponse
+  /** 서버가 준 폴리곤. 없으면 null이고 지도는 경계를 그리지 않는다. */
+  geojson: DongsGeoJson | null
 }
 
 export type Loadable<T> =
@@ -65,7 +69,16 @@ const NO_API: Loadable<never> = {
   pending: true,
 }
 
-export function useDashboard() {
+/** 지도 폴리곤은 아직 없을 수 있다. 없다고 화면 전체가 실패하면 안 된다. */
+async function geojsonOrNull(signal?: AbortSignal) {
+  try {
+    return await api.geojson(signal)
+  } catch {
+    return null
+  }
+}
+
+export function useDashboard(scenario: ScenarioName) {
   const [state, setState] = useState<Loadable<DashboardData>>(() =>
     isApiEnabled() ? { status: 'loading' } : NO_API,
   )
@@ -76,9 +89,10 @@ export function useDashboard() {
 
     void (async () => {
       try {
-        const [meta, compare, ...summaries] = await Promise.all([
+        const [meta, compare, geojson, ...summaries] = await Promise.all([
           api.meta(ac.signal),
           api.compare(CODES, ac.signal),
+          geojsonOrNull(ac.signal),
           ...CODES.map((c) => api.dong(c, ac.signal)),
         ])
 
@@ -87,7 +101,7 @@ export function useDashboard() {
           (c) => forecastInfo(meta, c)?.forecast_status === 'ready',
         )
         const forecasts = await Promise.all(
-          ready.map((c) => api.forecast(c, DEMO_DATE, ac.signal)),
+          ready.map((c) => api.forecast(c, DEMO_DATE, scenario, ac.signal)),
         )
 
         if (ac.signal.aborted) return
@@ -96,6 +110,7 @@ export function useDashboard() {
           data: {
             meta,
             compare,
+            geojson,
             districts: summaries.map((dto) =>
               adaptDong(dto, IDENTITY_COLOR[dto.code] ?? '#5C6E64'),
             ),
@@ -111,7 +126,8 @@ export function useDashboard() {
     })()
 
     return () => ac.abort()
-  }, [])
+    // 토글이 바뀌면 시나리오별 예측을 다시 받는다.
+  }, [scenario])
 
   return state
 }
