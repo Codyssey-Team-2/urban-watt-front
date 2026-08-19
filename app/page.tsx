@@ -1,69 +1,301 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useCallback, useMemo, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
+import { Sidebar } from '@/components/layout/Sidebar'
+import type { BriefingState } from '@/components/panels/BriefingCard'
+import type { MapController, Viewport } from '@/components/map/MapView'
+import { ComparisonView } from '@/components/views/ComparisonView'
+import { MapFocusView } from '@/components/views/MapFocusView'
+import { ChartFocusView } from '@/components/views/ChartFocusView'
+import { DataInfoView } from '@/components/views/DataInfoView'
+import { SettingsView } from '@/components/views/SettingsView'
+import type { ViewProps } from '@/components/views/shared'
+import {
+  BRIEFINGS,
+  CURRENT_HOUR,
+  DISTRICTS,
+  getDemandAt,
+  getExcessAt,
+  getRiskLevel,
+} from '@/lib/mock'
+import { interpolateHour } from '@/lib/api/adapt'
+import type { CardModel, ChartModel } from '@/components/views/shared'
+import type { RiskLevel } from '@/lib/types'
+import { useBriefing, useDashboard } from '@/lib/api/useDashboard'
+import { isApiEnabled } from '@/lib/api/client'
+import {
+  DEFAULT_SETTINGS,
+  VIEW_MAP_PADDING,
+  type ChartTab,
+  type Settings,
+  type ViewKey,
+} from '@/lib/nav'
+import type { ScenarioKey } from '@/lib/types'
+
+// MapLibre는 window/WebGL을 요구해 서버에서 렌더할 수 없다.
+const MapView = dynamic(
+  () => import('@/components/map/MapView').then((m) => m.MapView),
+  { ssr: false },
+)
+
+const VIEWS: Record<ViewKey, (props: ViewProps) => React.ReactNode> = {
+  comparison: ComparisonView,
+  map: MapFocusView,
+  chart: ChartFocusView,
+  data: DataInfoView,
+  settings: SettingsView,
+}
+
+export default function Page() {
+  // 화면 전체가 공유하는 상태는 여기 한 곳에만 둔다.
+  const [view, setView] = useState<ViewKey>('comparison')
+  const [scenario, setScenario] = useState<ScenarioKey>('c')
+  const [hour, setHour] = useState(CURRENT_HOUR)
+  const [playing, setPlaying] = useState(false)
+  const [chartTab, setChartTab] = useState<ChartTab>('demand')
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [viewport, setViewport] = useState<Viewport | null>(null)
+  const mapRef = useRef<MapController | null>(null)
+
+  const dashboard = useDashboard()
+  const briefing = useBriefing()
+
+  // 서버 등급 문자열을 화면 스타일용 3단계로 접는다.
+  // 색과 문구는 서버 값을 그대로 쓰고, 여기서는 강조 수준만 정한다.
+  const toRisk = (grade: string): RiskLevel =>
+    grade === '위험' ? 'danger' : grade === '안전' ? 'stable' : 'caution'
+
+  const cards: CardModel[] = useMemo(() => {
+    if (dashboard.status !== 'ready') {
+      // API가 없거나 아직 로딩 중이면 목데이터로 화면을 유지한다.
+      return DISTRICTS.map((d) => {
+        const excess = getExcessAt(d.code, scenario, hour)
+        const m = d.microclimate
+        return {
+          code: d.code,
+          name: d.name,
+          variant: d.variant,
+          headline: `+${Math.round(excess)}%`,
+          headlineLabel: '평시 대비',
+          grade: { stable: '안정', caution: '주의', danger: '위험' }[
+            getRiskLevel(excess)
+          ],
+          risk: getRiskLevel(excess),
+          stats: [
+            { label: '냉방 시작', value: `${m.balancePoint.toFixed(1)}°C` },
+            {
+              label: '1℃당',
+              value: `${m.coolingSlope.toFixed(1)}×`,
+              emphasize: d.variant === 'urban',
+            },
+            { label: '나무·풀밭', value: `${m.vegetationRate}%` },
+            {
+              label: '예측수요',
+              value: `${getDemandAt(d.code, scenario, hour).toFixed(1)}MW`,
+            },
+          ],
+        }
+      })
+    }
+
+    const { districts, days, meta } = dashboard.data
+    return districts.map((d) => {
+      const day = days[d.code]
+      const point = day ? interpolateHour(day.hours, hour) : null
+      const info = meta.dongs.find((x) => x.code === d.code)
+      const variant = d.identityColor === '#2E9E6B' ? 'cool' : 'urban'
+
+      return {
+        code: d.code,
+        name: d.name,
+        variant,
+        // 위험도는 초과율이 아니라 위험선 대비 비율이다 (계약 7항).
+        headline: point
+          ? `${point.riskPercent.toFixed(1)}%`
+          : d.demand.extraPercent != null
+            ? `+${d.demand.extraPercent.toFixed(1)}%`
+            : '—',
+        headlineLabel: point ? '위험선 대비' : '평소 대비 추가 사용',
+        // 시계열이 없으면 위험 등급이 없다. 도시열 등급을 대신 보여주되
+        // 무엇의 등급인지 밝힌다 — '매우 높음'만 있으면 위험도로 읽힌다.
+        grade: point ? point.grade : `도시열 ${d.heat.grade}`,
+        gradeColor: point ? point.color : d.heat.color,
+        // 패널 강조는 위험 등급에만 건다. 도시열이 높다고 지금 위험한 건 아니다.
+        risk: point ? toRisk(point.grade) : 'stable',
+        stats: [
+          {
+            label: '냉방 시작',
+            value:
+              d.cooling.switchOnTemp != null
+                ? `${d.cooling.switchOnTemp.toFixed(1)}°C`
+                : '—',
+          },
+          {
+            label: '1℃당',
+            value:
+              d.cooling.sensitivity != null
+                ? `${d.cooling.sensitivity.toFixed(2)}%`
+                : '—',
+          },
+          { label: '나무·풀밭', value: d.cover.green.text ?? '—' },
+          {
+            label: point ? '사용량' : '도시열 지수',
+            value: point
+              ? `${Math.round(point.usageKwh).toLocaleString()} kWh`
+              : d.heat.index != null
+                ? `${d.heat.index}`
+                : '—',
+          },
+        ],
+        note: point ? null : (info?.forecast_note ?? null),
+      }
+    })
+  }, [dashboard, scenario, hour])
+
+  /**
+   * 두 동이 모두 준비됐을 때만 비교 차트를 그린다는 계약(8항)을 따른다.
+   * 한쪽만 선으로 그리면 없는 쪽이 0인 것처럼 읽힌다.
+   * 대신 준비된 동의 실측 곡선을 단독으로 보여준다 — 위험선을 넘는 순간이
+   * 이 화면의 핵심이라 빈 화면으로 두지 않는다.
+   */
+  const chart: ChartModel = useMemo(() => {
+    if (dashboard.status !== 'ready') return { mode: 'mock' }
+    const { districts, days, meta } = dashboard.data
+    const withDay = districts.find((d) => days[d.code])
+    if (!withDay) return { mode: 'mock' }
+
+    const missing = districts
+      .filter((d) => !days[d.code])
+      .map((d) => meta.dongs.find((x) => x.code === d.code))
+      .filter(Boolean)
+    return {
+      mode: 'forecast',
+      day: days[withDay.code],
+      districtName: withDay.name,
+      identityColor: withDay.identityColor,
+      missingNote: missing.length
+        ? `${missing.map((m) => m!.name).join(' · ')}: ${missing[0]!.forecast_note ?? '시계열 없음'}`
+        : null,
+    }
+  }, [dashboard])
+
+  // 기상만·미기후 예측이 아직 없으면 토글을 잠근다.
+  const scenarioNote =
+    dashboard.status === 'ready'
+      ? (dashboard.data.meta.forecast_scenarios?.microclimate?.status ===
+        'pending'
+          ? dashboard.data.meta.forecast_scenarios.microclimate.note
+          : null)
+      : null
+
+  // API가 붙어 있으면 서버 브리핑, 아니면 목데이터로 화면을 유지한다.
+  const briefingState: BriefingState = !isApiEnabled()
+    ? { status: 'success', briefing: BRIEFINGS[scenario] }
+    : briefing.state.status === 'ready'
+      ? {
+          status: 'success',
+          briefing: {
+            summary: briefing.state.data.text,
+            evidence: [],
+            caveat: briefing.state.data.note ?? undefined,
+          },
+        }
+      : briefing.state.status === 'error'
+        ? { status: 'error', message: briefing.state.message }
+        : { status: 'loading' }
+
+  const briefingSource =
+    briefing.state.status === 'ready'
+      ? [briefing.state.data.provider, briefing.state.data.model]
+          .filter(Boolean)
+          .join(' · ')
+      : undefined
+
+  const handleMapReady = useCallback((controller: MapController) => {
+    mapRef.current = controller
+  }, [])
+
+  // 재생 중에 다른 화면으로 넘어가면 시간이 혼자 흐른다. 화면을 옮기면 멈춘다.
+  const handleViewChange = useCallback((next: ViewKey) => {
+    setView(next)
+    setPlaying(false)
+  }, [])
+
+  const ActiveView = VIEWS[view]
+  const viewProps: ViewProps = {
+    scenario,
+    onScenarioChange: setScenario,
+    hour,
+    onHourChange: setHour,
+    playing,
+    onPlayingChange: setPlaying,
+    chartTab,
+    onChartTabChange: setChartTab,
+    settings,
+    onSettingsChange: setSettings,
+    briefingState,
+    briefingSource,
+    briefingUnverified:
+      briefing.state.status === 'ready'
+        ? briefing.state.data.unverified_numbers
+        : undefined,
+    onBriefingRetry: briefing.retry,
+    dashboard,
+    cards,
+    chart,
+    scenarioNote,
+    mapRef,
+    viewport,
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="relative size-full">
+      {/* 지도는 화면을 꽉 채우는 배경이며 뷰가 바뀌어도 마운트를 유지한다.
+          다시 만들면 전환할 때마다 깜빡이고 초기화 비용이 든다. */}
+      <div className="absolute inset-0 bg-mapbase">
+        <MapView
+          scenario={scenario}
+          hour={hour}
+          padding={VIEW_MAP_PADDING[view]}
+          showLabels={settings.showMapLabels}
+          onReady={handleMapReady}
+          onViewChange={setViewport}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+      </div>
+
+      {/* 패널은 지도 위에 떠 있다. 폭이 줄면 겹치므로 절대위치가 아니라 flex로 짠다.
+          오버레이 자체는 화면 전체를 덮으므로 이벤트를 통과시켜야 지도를 끌 수 있다.
+          실제로 이벤트를 받아야 하는 건 Panel(pointer-events-auto)뿐이다. */}
+      <div className="pointer-events-none absolute inset-0 flex gap-5 p-6">
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed((v) => !v)}
+          activeView={view}
+          onViewChange={handleViewChange}
+        />
+        {/* 1024px 미만에서는 우측 레일을 아래로 내린다. 사이드바는 계속 왼쪽. */}
+        <div className="flex min-w-0 flex-1 flex-col gap-5 lg:flex-row">
+          <ActiveView {...viewProps} />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </div>
+
+      {/*
+        API를 붙여 놨는데 응답이 없으면 화면은 목데이터로 버틴다.
+        그 사실을 숨기면 시연 중 가짜 수치를 실측처럼 설명하게 된다.
+      */}
+      {isApiEnabled() && dashboard.status === 'error' && (
+        <div className="pointer-events-auto absolute left-1/2 top-1.5 -translate-x-1/2 rounded-full bg-caution-light px-3 py-1 text-[13px] text-caution-text">
+          분석 서버 응답 없음 — 아래 수치는 시연용 목데이터입니다
         </div>
-      </main>
+      )}
+
+      {/* 지도 배경 출처. OSM 데이터(ODbL)는 표기 의무가 있다. */}
+      <p className="pointer-events-none absolute bottom-1 left-1/2 -translate-x-1/2 text-[13px] text-faint/70">
+        경계 southkorea/seoul-maps · 한강 © OpenStreetMap contributors
+      </p>
+
     </div>
-  );
+  )
 }
