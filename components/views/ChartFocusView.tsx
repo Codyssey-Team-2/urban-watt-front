@@ -22,6 +22,7 @@ import type { ViewProps } from './shared'
 export function ChartFocusView({
   scenario,
   onScenarioChange,
+  scenarioNote,
   hour,
   onHourChange,
   playing,
@@ -37,7 +38,11 @@ export function ChartFocusView({
       <div className="flex flex-wrap items-start gap-5">
         <HeaderCard hour={hour} />
         <WeatherChips hour={hour} />
-        <MicroclimateToggle scenario={scenario} onChange={onScenarioChange} />
+        <MicroclimateToggle
+          scenario={scenario}
+          onChange={onScenarioChange}
+          disabledNote={scenarioNote}
+        />
       </div>
 
       <Panel className="flex min-h-0 flex-1 flex-col px-6 pb-4 pt-5">

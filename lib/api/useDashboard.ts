@@ -50,6 +50,10 @@ export function canCompare(meta: MetaResponse | null): boolean {
 
 function describe(err: unknown): { message: string; pending: boolean } {
   if (err instanceof ApiError) return { message: err.message, pending: err.pending }
+  // fetch 자체가 실패하면 브라우저가 'Failed to fetch'만 준다.
+  // 서버가 꺼져 있거나 터널이 내려간 경우라 그대로 보여줄 문구가 아니다.
+  if (err instanceof TypeError)
+    return { message: '분석 서버에 연결하지 못했습니다.', pending: false }
   if (err instanceof Error) return { message: err.message, pending: false }
   return { message: '데이터를 불러오지 못했습니다.', pending: false }
 }

@@ -10,12 +10,6 @@ import { DistrictCard } from '@/components/panels/DistrictCard'
 import { BriefingCard } from '@/components/panels/BriefingCard'
 import { ZoomControls } from '@/components/map/ZoomControls'
 import { MiniMap } from '@/components/map/MiniMap'
-import {
-  DISTRICTS,
-  getDemandAt,
-  getExcessAt,
-  getRiskLevel,
-} from '@/lib/mock'
 import { PLAYBACK_SPEED } from '@/lib/nav'
 import type { ViewProps } from './shared'
 
@@ -24,6 +18,7 @@ export function ComparisonView(props: ViewProps) {
   const {
     scenario,
     onScenarioChange,
+    scenarioNote,
     hour,
     onHourChange,
     playing,
@@ -31,6 +26,7 @@ export function ComparisonView(props: ViewProps) {
     chartTab,
     onChartTabChange,
     settings,
+    cards,
     briefingState,
     briefingSource,
     briefingUnverified,
@@ -48,6 +44,7 @@ export function ComparisonView(props: ViewProps) {
           <MicroclimateToggle
             scenario={scenario}
             onChange={onScenarioChange}
+            disabledNote={scenarioNote}
           />
         </div>
 
@@ -92,19 +89,13 @@ export function ComparisonView(props: ViewProps) {
           좁은 화면에서는 display:contents로 바깥 가로 배치에 그대로 참여시킨다.
         */}
         <div className="contents lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:gap-5 lg:overflow-y-auto short:lg:gap-3">
-        {DISTRICTS.map((district) => {
-          const excess = getExcessAt(district.code, scenario, hour)
-          return (
-            <DistrictCard
-              key={district.code}
-              district={district}
-              excess={excess}
-              risk={getRiskLevel(excess)}
-              demand={getDemandAt(district.code, scenario, hour)}
-              className="w-[320px] shrink-0 lg:w-auto"
-            />
-          )
-        })}
+        {cards.map((card) => (
+          <DistrictCard
+            key={card.code}
+            card={card}
+            className="w-[320px] shrink-0 lg:w-auto"
+          />
+        ))}
 
         <BriefingCard
           state={briefingState}

@@ -1,21 +1,17 @@
 import { Panel } from '@/components/layout/Panel'
 import { cn } from '@/lib/cn'
-import type { District, RiskLevel } from '@/lib/types'
+import { readableOn } from '@/lib/api/contrast'
+import type { CardModel } from '@/components/views/shared'
 
-/** 배지는 상태만 나타낸다. 지역 정체성 색과 섞지 않는다. */
-const RISK: Record<RiskLevel, { label: string; className: string }> = {
-  stable: { label: '안정', className: 'bg-brand-light text-brand-dark' },
-  caution: { label: '주의', className: 'bg-caution-light text-caution-text' },
-  danger: { label: '위험', className: 'bg-danger text-white' },
-}
+/** 서버가 등급 색을 주지 않을 때 쓰는 자체 스타일 */
+const FALLBACK = {
+  stable: 'bg-brand-light text-brand-dark',
+  caution: 'bg-caution-light text-caution-text',
+  danger: 'bg-danger text-white',
+} as const
 
 interface DistrictCardProps {
-  district: District
-  /** 선택 시각의 평시 대비 초과율 (%) */
-  excess: number
-  risk: RiskLevel
-  /** 선택 시각의 예측 수요 MW */
-  demand: number
+  card: CardModel
   className?: string
 }
 
@@ -30,12 +26,12 @@ function Stat({
 }) {
   return (
     <div className="min-w-0">
-      <div className="text-[13px] leading-tight text-faint">{label}</div>
+      <div className="truncate text-[13px] leading-tight text-faint">{label}</div>
       <div
         className={cn(
-          'tnum mt-0.5 text-[15px] leading-tight',
-          // 강조는 굵기로만 한다. 색은 상태 신호로 아껴 둔다.
-          emphasize ? 'font-semibold text-ink' : 'text-ink',
+          'tnum mt-0.5 truncate text-[15px] leading-tight text-ink',
+          // 강조는 굵기로만. 색은 상태 신호로 아껴 둔다.
+          emphasize && 'font-semibold',
         )}
       >
         {value}
@@ -44,35 +40,34 @@ function Stat({
   )
 }
 
-export function DistrictCard({
-  district,
-  excess,
-  risk,
-  demand,
-  className,
-}: DistrictCardProps) {
-  const urban = district.variant === 'urban'
-  const riskStyle = RISK[risk]
-  const { balancePoint, coolingSlope, vegetationRate } = district.microclimate
+export function DistrictCard({ card, className }: DistrictCardProps) {
+  const danger = card.risk === 'danger'
 
   return (
     <Panel
-      tone={risk === 'danger' ? 'danger' : 'default'}
-      accent={district.variant}
+      tone={danger ? 'danger' : 'default'}
+      accent={card.variant}
       className={cn('transition-colors duration-200', className)}
     >
       <div className="px-5 pb-5 pt-4 short:pb-3 short:pt-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[15px] font-semibold text-ink">
-            {district.name}
-          </span>
+          <span className="text-[15px] font-semibold text-ink">{card.name}</span>
           <span
             className={cn(
               'rounded-full px-2.5 py-0.5 text-[13px] font-semibold transition-colors duration-200',
-              riskStyle.className,
+              !card.gradeColor && FALLBACK[card.risk],
             )}
+            // 등급 색은 서버가 정한다. 글자색만 대비로 고른다.
+            style={
+              card.gradeColor
+                ? {
+                    background: card.gradeColor,
+                    color: readableOn(card.gradeColor),
+                  }
+                : undefined
+            }
           >
-            {riskStyle.label}
+            {card.grade}
           </span>
         </div>
 
@@ -81,26 +76,25 @@ export function DistrictCard({
             className={cn(
               'tnum text-[40px] font-semibold leading-none tracking-[-0.02em] transition-colors duration-200',
               // 평소에는 검정. 위험 상태에서만 빨강이 나온다.
-              // 지역 구분은 상단 컬러바와 지도가 이미 하고 있어서
-              // 숫자까지 색을 입히면 상태 신호가 묻힌다.
-              risk === 'danger' ? 'text-danger-text' : 'text-ink',
+              danger ? 'text-danger-text' : 'text-ink',
             )}
           >
-            +{Math.round(excess)}%
+            {card.headline}
           </span>
-          <span className="text-[13px] text-faint">평시 대비</span>
+          <span className="text-[13px] text-faint">{card.headlineLabel}</span>
         </div>
 
         <div className="mt-4 grid grid-cols-4 gap-3 border-t border-hair pt-3">
-          <Stat label="균형점" value={`${balancePoint.toFixed(1)}°C`} />
-          <Stat
-            label="기울기"
-            value={`${coolingSlope.toFixed(1)}×`}
-            emphasize={urban}
-          />
-          <Stat label="식생" value={`${vegetationRate}%`} />
-          <Stat label="예측수요" value={`${demand.toFixed(1)}MW`} />
+          {card.stats.map((s) => (
+            <Stat key={s.label} {...s} />
+          ))}
         </div>
+
+        {card.note && (
+          <p className="mt-3 border-t border-hair pt-3 text-[13px] leading-relaxed text-faint">
+            {card.note}
+          </p>
+        )}
       </div>
     </Panel>
   )

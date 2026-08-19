@@ -18,6 +18,7 @@ const RISK_LABEL = { stable: '안정', caution: '주의', danger: '위험' } as 
 export function MapFocusView({
   scenario,
   onScenarioChange,
+  scenarioNote,
   hour,
   mapRef,
   viewport,
@@ -26,7 +27,11 @@ export function MapFocusView({
     <div className="flex min-w-0 flex-1 flex-col gap-5">
       <div className="flex flex-wrap items-start gap-5">
         <HeaderCard hour={hour} />
-        <MicroclimateToggle scenario={scenario} onChange={onScenarioChange} />
+        <MicroclimateToggle
+          scenario={scenario}
+          onChange={onScenarioChange}
+          disabledNote={scenarioNote}
+        />
 
         {/* 채색 기준을 명시하지 않으면 무엇을 보는 지도인지 알 수 없다. */}
         <Panel className="px-4 py-3">
