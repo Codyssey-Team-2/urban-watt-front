@@ -112,3 +112,35 @@ export const RefreshIcon = ({ size = 20, className }: IconProps) => (
     <path d="M20 4v7h-7" />
   </svg>
 )
+
+export const PlayIcon = ({ size = 20, className }: IconProps) => (
+  <svg {...base(size, className)} fill="currentColor" strokeWidth={0}>
+    <path d="M8 5.5v13l11-6.5-11-6.5z" />
+  </svg>
+)
+
+export const PauseIcon = ({ size = 20, className }: IconProps) => (
+  <svg {...base(size, className)} fill="currentColor" strokeWidth={0}>
+    <path d="M8 5h3v14H8zM13 5h3v14h-3z" />
+  </svg>
+)
+
+export const TemperatureIcon = ({ size = 20, className }: IconProps) => (
+  <svg {...base(size, className)}>
+    <path d="M10 13.5V5a2 2 0 1 1 4 0v8.5a4 4 0 1 1-4 0z" />
+    <path d="M12 16.5v-5" />
+  </svg>
+)
+
+export const DropletIcon = ({ size = 20, className }: IconProps) => (
+  <svg {...base(size, className)}>
+    <path d="M12 3.5c3 3.6 5 6.4 5 8.9a5 5 0 0 1-10 0c0-2.5 2-5.3 5-8.9z" />
+  </svg>
+)
+
+export const WindIcon = ({ size = 20, className }: IconProps) => (
+  <svg {...base(size, className)}>
+    <path d="M4 9h9a2.5 2.5 0 1 0-2.5-2.5" />
+    <path d="M3 14h12a2.5 2.5 0 1 1-2.5 2.5" />
+  </svg>
+)

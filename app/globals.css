@@ -32,8 +32,9 @@
   --color-hair: #edf2ee;
   --color-mapbase: #edf4ec;
 
-  /* 차트 보조 (모델 A/B = 기상만 계열, 중립 회색-초록) */
-  --color-neutral-line: #b2c0b7;
+  /* 차트 기준선 (미기후 미반영). 의도적으로 무채색이지만, 원래 값(#B2C0B7)은
+     흰 패널 위 대비가 1.84:1로 읽히지 않아 3:1을 넘도록 어둡게 조정했다. */
+  --color-neutral-line: #7c8f84;
   --color-track: #e7eee9;
 
   /* 패널 그림자: 접촉(1겹) + 주변(2겹). 1겹이면 스티커처럼 보인다. */

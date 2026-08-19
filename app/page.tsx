@@ -3,6 +3,11 @@
 import { useState } from 'react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Panel } from '@/components/layout/Panel'
+import { HeaderCard } from '@/components/controls/HeaderCard'
+import { WeatherChips } from '@/components/controls/WeatherChips'
+import { MicroclimateToggle } from '@/components/controls/MicroclimateToggle'
+import { TimeScrubber } from '@/components/controls/TimeScrubber'
+import { DemandChart } from '@/components/panels/DemandChart'
 import { DistrictCard } from '@/components/panels/DistrictCard'
 import { ModelPerfCard } from '@/components/panels/ModelPerfCard'
 import {
@@ -20,7 +25,7 @@ import {
 } from '@/lib/mock'
 import type { ScenarioKey } from '@/lib/types'
 
-/** Phase 2 골격 확인용 자리표시자. 각 Phase에서 실제 컴포넌트로 교체된다. */
+/** 아직 구현되지 않은 자리. Phase 5에서 지도 컴포넌트로 교체된다. */
 function Slot({
   label,
   phase,
@@ -46,9 +51,9 @@ function Slot({
 }
 
 export default function Page() {
-  // 화면 전체가 공유하는 상태는 이 셋뿐이다. 여기서 아래로 내려보낸다.
   const [scenario, setScenario] = useState<ScenarioKey>('c')
   const [hour, setHour] = useState(CURRENT_HOUR)
+  const [playing, setPlaying] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   // Phase 3 검수용 — 백엔드 연동 시 실제 fetch 상태로 대체된다.
@@ -76,12 +81,9 @@ export default function Page() {
         {/* 중앙 컬럼 — min-w-0 이 없으면 자식이 넘칠 때 레일을 밀어낸다 */}
         <div className="flex min-w-0 flex-1 flex-col gap-5">
           <div className="flex flex-wrap items-start gap-5">
-            <Slot label="제목 · 날짜 · 폭염 배지" phase="HeaderCard · Phase 4" />
-            <Slot label="S-DoT 격차 · 습도 · 풍속" phase="WeatherChips · Phase 4" />
-            <Slot
-              label="기상만 ↔ 미기후 반영"
-              phase="MicroclimateToggle · Phase 4"
-            />
+            <HeaderCard hour={hour} />
+            <WeatherChips hour={hour} />
+            <MicroclimateToggle scenario={scenario} onChange={setScenario} />
           </div>
 
           <div className="flex-1" />
@@ -91,18 +93,28 @@ export default function Page() {
             <Slot
               label="미니맵"
               phase="MiniMap · Phase 5"
-              className="hidden h-[218px] w-[240px] flex-none xl:flex"
+              className="hidden h-[218px] w-[240px] flex-none self-end xl:flex"
             />
-            <Slot
-              label="시간대별 전력수요 차트 + 시간 스크러버"
-              phase="DemandChart · TimeScrubber · Phase 4"
-              className="h-[218px] min-w-0 flex-1"
-            />
+            {/* 차트는 218px면 그림 영역이 60px밖에 안 남아 두 동의 기울기 차이가
+                묻힌다. 이 데모의 핵심이므로 미니맵보다 높게 잡는다. */}
+            <Panel className="flex h-[288px] min-w-0 flex-1 flex-col px-5 pb-3 pt-4">
+              <div className="min-h-0 flex-1">
+                <DemandChart scenario={scenario} hour={hour} />
+              </div>
+              <TimeScrubber
+                hour={hour}
+                onHourChange={setHour}
+                playing={playing}
+                onPlayingChange={setPlaying}
+              />
+            </Panel>
           </div>
         </div>
 
         {/* 우측 레일 400px 고정 */}
-        <aside className="flex w-[400px] flex-none flex-col gap-5">
+        {/* 레일 자식은 절대 눌리지 않는다 — 눌리면 accent 패널의 overflow-hidden에
+            걸려 카드 하단 지표가 소리 없이 잘린다. 넘치면 스크롤로 처리한다. */}
+        <aside className="flex w-[400px] flex-none flex-col gap-5 overflow-y-auto">
           {DISTRICTS.map((district) => {
             const forecast = getForecast(district.code, scenario)
             const point = forecast.hourly[hour]
@@ -112,6 +124,7 @@ export default function Page() {
                 district={district}
                 forecast={forecast}
                 demand={scenario === 'c' ? point.modelC : point.modelB}
+                className="shrink-0"
               />
             )
           })}
@@ -119,11 +132,12 @@ export default function Page() {
           <BriefingCard
             state={briefingState}
             onRetry={() => setBriefingStatus('success')}
+            className="shrink-0"
           />
 
-          <ModelPerfCard mape={OVERALL_MAPE} />
+          <ModelPerfCard mape={OVERALL_MAPE} className="shrink-0" />
 
-          <div className="flex-1" />
+          <div className="min-h-5 flex-1" />
 
           <ZoomControls
             onZoomIn={() => {}}
@@ -133,36 +147,18 @@ export default function Page() {
         </aside>
       </div>
 
-      {/* 상태 배선 확인용 — Phase 4에서 실제 컨트롤로 대체된다 */}
-      <div className="tnum absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-ink/70 px-3 py-1 text-[13px] text-white">
-        scenario={scenario} · hour={hour} · sidebar=
-        {sidebarCollapsed ? 'collapsed' : 'expanded'}
-        <button
-          type="button"
-          onClick={() => setScenario((s) => (s === 'c' ? 'b' : 'c'))}
-          className="ml-2 underline"
-        >
-          토글
-        </button>
-        <button
-          type="button"
-          onClick={() => setHour((h) => (h + 1) % 24)}
-          className="ml-2 underline"
-        >
-          시간+
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            setBriefingStatus((s) =>
-              s === 'success' ? 'loading' : s === 'loading' ? 'error' : 'success',
-            )
-          }
-          className="ml-2 underline"
-        >
-          브리핑={briefingStatus}
-        </button>
-      </div>
+      {/* 브리핑 3상태 검수용 — Phase 8(백엔드 연동)에서 제거된다 */}
+      <button
+        type="button"
+        onClick={() =>
+          setBriefingStatus((s) =>
+            s === 'success' ? 'loading' : s === 'loading' ? 'error' : 'success',
+          )
+        }
+        className="tnum absolute bottom-1 right-1 rounded-full bg-ink/70 px-3 py-1 text-[13px] text-white"
+      >
+        브리핑 상태={briefingStatus}
+      </button>
     </div>
   )
 }

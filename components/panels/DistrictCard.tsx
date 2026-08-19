@@ -13,6 +13,7 @@ interface DistrictCardProps {
   forecast: Forecast
   /** 선택 시각의 예측 수요 MW */
   demand: number
+  className?: string
 }
 
 function Stat({
@@ -39,7 +40,12 @@ function Stat({
   )
 }
 
-export function DistrictCard({ district, forecast, demand }: DistrictCardProps) {
+export function DistrictCard({
+  district,
+  forecast,
+  demand,
+  className,
+}: DistrictCardProps) {
   const warm = district.variant === 'warm'
   const risk = RISK[forecast.riskLevel]
   const { balancePoint, coolingSlope, vegetationRate } = district.microclimate
@@ -48,7 +54,7 @@ export function DistrictCard({ district, forecast, demand }: DistrictCardProps) 
     <Panel
       tone={warm && forecast.riskLevel === 'danger' ? 'warm' : 'default'}
       accent={district.variant}
-      className="transition-colors duration-200"
+      className={cn('transition-colors duration-200', className)}
     >
       <div className="px-5 pb-5 pt-4">
         <div className="flex items-center justify-between gap-2">
