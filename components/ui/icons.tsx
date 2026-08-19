@@ -72,3 +72,43 @@ export const ChevronLeftIcon = ({ size = 20, className }: IconProps) => (
     <path d="m15 6-6 6 6 6" />
   </svg>
 )
+
+export const SparklesIcon = ({ size = 20, className }: IconProps) => (
+  <svg {...base(size, className)}>
+    <path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3z" />
+    <path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2z" />
+  </svg>
+)
+
+export const PlusIcon = ({ size = 20, className }: IconProps) => (
+  <svg {...base(size, className)}>
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+)
+
+export const MinusIcon = ({ size = 20, className }: IconProps) => (
+  <svg {...base(size, className)}>
+    <path d="M5 12h14" />
+  </svg>
+)
+
+export const FocusIcon = ({ size = 20, className }: IconProps) => (
+  <svg {...base(size, className)}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3" />
+  </svg>
+)
+
+export const AlertIcon = ({ size = 20, className }: IconProps) => (
+  <svg {...base(size, className)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 8v4.5M12 16h.01" />
+  </svg>
+)
+
+export const RefreshIcon = ({ size = 20, className }: IconProps) => (
+  <svg {...base(size, className)}>
+    <path d="M20 11a8 8 0 1 0-.6 4" />
+    <path d="M20 4v7h-7" />
+  </svg>
+)

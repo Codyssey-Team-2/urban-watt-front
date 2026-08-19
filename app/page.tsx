@@ -3,8 +3,21 @@
 import { useState } from 'react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Panel } from '@/components/layout/Panel'
+import { DistrictCard } from '@/components/panels/DistrictCard'
+import { ModelPerfCard } from '@/components/panels/ModelPerfCard'
+import {
+  BriefingCard,
+  type BriefingState,
+} from '@/components/panels/BriefingCard'
+import { ZoomControls } from '@/components/map/ZoomControls'
 import { cn } from '@/lib/cn'
-import { CURRENT_HOUR } from '@/lib/mock'
+import {
+  BRIEFINGS,
+  CURRENT_HOUR,
+  DISTRICTS,
+  OVERALL_MAPE,
+  getForecast,
+} from '@/lib/mock'
 import type { ScenarioKey } from '@/lib/types'
 
 /** Phase 2 골격 확인용 자리표시자. 각 Phase에서 실제 컴포넌트로 교체된다. */
@@ -37,6 +50,16 @@ export default function Page() {
   const [scenario, setScenario] = useState<ScenarioKey>('c')
   const [hour, setHour] = useState(CURRENT_HOUR)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  // Phase 3 검수용 — 백엔드 연동 시 실제 fetch 상태로 대체된다.
+  const [briefingStatus, setBriefingStatus] =
+    useState<BriefingState['status']>('success')
+  const briefingState: BriefingState =
+    briefingStatus === 'success'
+      ? { status: 'success', briefing: BRIEFINGS[scenario] }
+      : briefingStatus === 'error'
+        ? { status: 'error' }
+        : { status: 'loading' }
 
   return (
     <div className="relative size-full">
@@ -80,27 +103,32 @@ export default function Page() {
 
         {/* 우측 레일 400px 고정 */}
         <aside className="flex w-[400px] flex-none flex-col gap-5">
-          <Slot
-            label="진관동"
-            phase="DistrictCard · Phase 3"
-            className="h-[150px]"
+          {DISTRICTS.map((district) => {
+            const forecast = getForecast(district.code, scenario)
+            const point = forecast.hourly[hour]
+            return (
+              <DistrictCard
+                key={district.code}
+                district={district}
+                forecast={forecast}
+                demand={scenario === 'c' ? point.modelC : point.modelB}
+              />
+            )
+          })}
+
+          <BriefingCard
+            state={briefingState}
+            onRetry={() => setBriefingStatus('success')}
           />
-          <Slot
-            label="창신동"
-            phase="DistrictCard · Phase 3"
-            className="h-[150px]"
-          />
-          <Slot label="AI 브리핑" phase="BriefingCard · Phase 3" className="h-[130px]" />
-          <Slot
-            label="모델 성능 · MAPE"
-            phase="ModelPerfCard · Phase 3"
-            className="h-[130px]"
-          />
+
+          <ModelPerfCard mape={OVERALL_MAPE} />
+
           <div className="flex-1" />
-          <Slot
-            label="줌 컨트롤"
-            phase="ZoomControls · Phase 5"
-            className="h-[44px] w-[136px] self-end"
+
+          <ZoomControls
+            onZoomIn={() => {}}
+            onZoomOut={() => {}}
+            onReset={() => {}}
           />
         </aside>
       </div>
@@ -122,6 +150,17 @@ export default function Page() {
           className="ml-2 underline"
         >
           시간+
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            setBriefingStatus((s) =>
+              s === 'success' ? 'loading' : s === 'loading' ? 'error' : 'success',
+            )
+          }
+          className="ml-2 underline"
+        >
+          브리핑={briefingStatus}
         </button>
       </div>
     </div>
